@@ -55,29 +55,31 @@ struct CameraPreview: UIViewRepresentable {
         }
         
         var videoPreviewLayer: AVCaptureVideoPreviewLayer {
-            return layer as! AVCaptureVideoPreviewLayer
+            layer as! AVCaptureVideoPreviewLayer
         }
     }
 
     let session: AVCaptureSession
-    
+
     func makeUIView(context: Context) -> VideoPreviewView {
         let videoPreviewView = VideoPreviewView()
-        videoPreviewView.videoPreviewLayer.session = session
-        videoPreviewView.videoPreviewLayer.videoGravity = .resizeAspectFill
-
-        context.coordinator.previewLayer = videoPreviewView.videoPreviewLayer
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            context.coordinator.orientationChanged()
+        let previewLayer = videoPreviewView.videoPreviewLayer
+        previewLayer.session = session
+        previewLayer.videoGravity = .resizeAspectFill
+        
+        context.coordinator.previewLayer = previewLayer
+        
+        DispatchQueue.main.async {
+            context.coordinator.updateVideoOrientation()
         }
 
         NotificationCenter.default.addObserver(
             context.coordinator,
-            selector: #selector(Coordinator.orientationChanged),
+            selector: #selector(Coordinator.updateVideoOrientation),
             name: UIDevice.orientationDidChangeNotification,
             object: nil
         )
-        
+
         return videoPreviewView
     }
     
@@ -86,35 +88,51 @@ struct CameraPreview: UIViewRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        return Coordinator()
+        Coordinator()
     }
     
     class Coordinator {
-            var previewLayer: AVCaptureVideoPreviewLayer?
+        var previewLayer: AVCaptureVideoPreviewLayer?
+        var lastOrientation: AVCaptureVideoOrientation = .portrait
+        
+        @objc func updateVideoOrientation() {
+            guard
+                let previewLayer = previewLayer,
+                let connection = previewLayer.connection,
+                connection.isVideoOrientationSupported
+            else { return }
             
-            @objc func orientationChanged() {
-                guard let previewLayer = previewLayer,
-                      let connection = previewLayer.connection,
-                      connection.isVideoOrientationSupported else { return }
-
-                connection.videoOrientation = getVideoOrientation(from: UIDevice.current.orientation)
+            let orientation = UIDevice.current.videoOrientation
+            connection.videoOrientation = orientation
+            if orientation == .portraitUpsideDown {
+                switch lastOrientation {
+                           case .portrait:
+                               previewLayer.setAffineTransform(CGAffineTransform.identity.rotated(by: .pi))
+                           case .landscapeLeft:
+                               previewLayer.setAffineTransform(CGAffineTransform.identity.rotated(by: -.pi / 2))
+                           case .landscapeRight:
+                               previewLayer.setAffineTransform(CGAffineTransform.identity.rotated(by: .pi / 2))
+                           default: 
+                               previewLayer.setAffineTransform(.identity)
+                           }
+            } else {
+                previewLayer.setAffineTransform(.identity)
             }
-            
-            private func getVideoOrientation(from deviceOrientation: UIDeviceOrientation) -> AVCaptureVideoOrientation {
-                switch deviceOrientation {
-                case .portrait:
-                    return .portrait
-                case .landscapeLeft:
-                    return .landscapeRight
-                case .landscapeRight:
-                    return .landscapeLeft
-                case .portraitUpsideDown:
-                    return .portraitUpsideDown
-                default:
-                    return .portrait // Valor predeterminado
-                }
-            }
+            lastOrientation = orientation
         }
+    }
+}
+
+private extension UIDevice {
+    var videoOrientation: AVCaptureVideoOrientation {
+        switch orientation {
+        case .portrait: return .portrait
+        case .landscapeLeft: return .landscapeRight
+        case .landscapeRight: return .landscapeLeft
+        case .portraitUpsideDown: return .portraitUpsideDown
+        default: return .portrait
+        }
+    }
 }
 
 #Preview {
