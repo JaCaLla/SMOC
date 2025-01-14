@@ -10,6 +10,7 @@ import AVFoundation
 
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
+    @State private var orientation = UIDeviceOrientation.unknown
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.session)
@@ -40,24 +41,14 @@ struct VideoRecorderView: View {
             Task {
                 await videoManager.setupSession()
             }
+        }.onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            orientation = UIDevice.current.orientation
         }
         
     }
 }
 
 struct CameraPreview: UIViewRepresentable {
-    let session: AVCaptureSession
-    
-    func makeUIView(context: Context) -> VideoPreviewView {
-        let view = VideoPreviewView()
-        view.videoPreviewLayer.session = session
-        view.videoPreviewLayer.videoGravity = .resizeAspect
-        view.videoPreviewLayer.connection?.videoOrientation = .portrait
-        return view
-    }
-    
-    func updateUIView(_ uiView: VideoPreviewView, context: Context) {}
-    
     class VideoPreviewView: UIView {
         override class var layerClass: AnyClass {
             AVCaptureVideoPreviewLayer.self
@@ -67,6 +58,63 @@ struct CameraPreview: UIViewRepresentable {
             return layer as! AVCaptureVideoPreviewLayer
         }
     }
+
+    let session: AVCaptureSession
+    
+    func makeUIView(context: Context) -> VideoPreviewView {
+        let videoPreviewView = VideoPreviewView()
+        videoPreviewView.videoPreviewLayer.session = session
+        videoPreviewView.videoPreviewLayer.videoGravity = .resizeAspectFill
+
+        context.coordinator.previewLayer = videoPreviewView.videoPreviewLayer
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            context.coordinator.orientationChanged()
+        }
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.orientationChanged),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+        
+        return videoPreviewView
+    }
+    
+    func updateUIView(_ uiView: VideoPreviewView, context: Context) {
+        context.coordinator.previewLayer?.frame = uiView.bounds
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        return Coordinator()
+    }
+    
+    class Coordinator {
+            var previewLayer: AVCaptureVideoPreviewLayer?
+            
+            @objc func orientationChanged() {
+                guard let previewLayer = previewLayer,
+                      let connection = previewLayer.connection,
+                      connection.isVideoOrientationSupported else { return }
+
+                connection.videoOrientation = getVideoOrientation(from: UIDevice.current.orientation)
+            }
+            
+            private func getVideoOrientation(from deviceOrientation: UIDeviceOrientation) -> AVCaptureVideoOrientation {
+                switch deviceOrientation {
+                case .portrait:
+                    return .portrait
+                case .landscapeLeft:
+                    return .landscapeRight
+                case .landscapeRight:
+                    return .landscapeLeft
+                case .portraitUpsideDown:
+                    return .portraitUpsideDown
+                default:
+                    return .portrait // Valor predeterminado
+                }
+            }
+        }
 }
 
 #Preview {
