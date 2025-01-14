@@ -4,16 +4,23 @@
 //
 //  Created by Javier Calatrava on 13/1/25.
 //
-
-import Foundation
 import AVFoundation
+import Foundation
 
-protocol VideoManagerProtocol {
-    func checkPermission()
-    func requestPermission()
+protocol AVCaptureDeviceProtocol {
+    static func authorizationStatus(for mediaType: AVMediaType) -> AVAuthorizationStatus
+    static func requestAccess(for mediaType: AVMediaType, completionHandler: @escaping (Bool) -> Void)
 }
 
-final class VideoManager: ObservableObject, @unchecked Sendable {
+extension AVCaptureDevice: AVCaptureDeviceProtocol {}
+
+protocol VideoManagerProtocol {
+    var permissionGranted: Bool { get }
+    func checkPermission() async
+    func requestPermission() async -> Bool
+}
+
+/*final*/ class VideoManager: ObservableObject, @unchecked Sendable {
     
     @MainActor
     @Published var permissionGranted: Bool = false
@@ -27,23 +34,31 @@ final class VideoManager: ObservableObject, @unchecked Sendable {
             }
         }
     }
+    
+    private let avCaptureDevice: AVCaptureDeviceProtocol.Type
+
+    init(device: AVCaptureDeviceProtocol.Type = AVCaptureDevice.self) {
+        self.avCaptureDevice = device
+    }
 }
 
 extension VideoManager: VideoManagerProtocol {
-    func checkPermission() {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+    func checkPermission() async {
+        switch avCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             internalPermissionGranted = true
         case .notDetermined:
-            requestPermission()
+            internalPermissionGranted = await requestPermission()
         default:
             internalPermissionGranted = false
         }
     }
     
-    func requestPermission() {
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            self.internalPermissionGranted = granted
+    func requestPermission() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            avCaptureDevice.requestAccess(for: .video) { granted in
+                continuation.resume(returning: granted)
+            }
         }
     }
 }

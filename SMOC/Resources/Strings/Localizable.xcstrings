@@ -1,0 +1,41 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "alert_btn_settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuración"
+          }
+        }
+      }
+    },
+    "alert_msg_settinggs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permission is required to access the camera and microphone"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se requiere permiso para acceder a la cámara y el micrófono"
+          }
+        }
+      }
+    },
+    "Permissions: OK!" : {
+      "shouldTranslate" : false
+    }
+  },
+  "version" : "1.0"
+}

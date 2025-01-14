@@ -6,11 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		29A00D2F2D36664200F9A21A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29D13CD02D358257005E61EC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 29D13CD72D358257005E61EC;
+			remoteInfo = SMOC;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		29A00D2B2D36664200F9A21A /* SMOCTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SMOCTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		29D13CD82D358257005E61EC /* SMOC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SMOC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		29A00D2C2D36664200F9A21A /* SMOCTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SMOCTests;
+			sourceTree = "<group>";
+		};
 		29D13CDA2D358257005E61EC /* SMOC */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SMOC;
@@ -19,6 +35,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		29A00D282D36664200F9A21A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		29D13CD52D358257005E61EC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				29D13CDA2D358257005E61EC /* SMOC */,
+				29A00D2C2D36664200F9A21A /* SMOCTests */,
 				29D13CD92D358257005E61EC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				29D13CD82D358257005E61EC /* SMOC.app */,
+				29A00D2B2D36664200F9A21A /* SMOCTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +73,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		29A00D2A2D36664200F9A21A /* SMOCTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 29A00D312D36664200F9A21A /* Build configuration list for PBXNativeTarget "SMOCTests" */;
+			buildPhases = (
+				29A00D272D36664200F9A21A /* Sources */,
+				29A00D282D36664200F9A21A /* Frameworks */,
+				29A00D292D36664200F9A21A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				29A00D302D36664200F9A21A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				29A00D2C2D36664200F9A21A /* SMOCTests */,
+			);
+			name = SMOCTests;
+			packageProductDependencies = (
+			);
+			productName = SMOCTests;
+			productReference = 29A00D2B2D36664200F9A21A /* SMOCTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		29D13CD72D358257005E61EC /* SMOC */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 29D13CE62D358259005E61EC /* Build configuration list for PBXNativeTarget "SMOC" */;
@@ -80,6 +128,10 @@
 				LastSwiftUpdateCheck = 1610;
 				LastUpgradeCheck = 1610;
 				TargetAttributes = {
+					29A00D2A2D36664200F9A21A = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = 29D13CD72D358257005E61EC;
+					};
 					29D13CD72D358257005E61EC = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -91,6 +143,7 @@
 			knownRegions = (
 				en,
 				Base,
+				es,
 			);
 			mainGroup = 29D13CCF2D358257005E61EC;
 			minimizedProjectReferenceProxies = 1;
@@ -100,11 +153,19 @@
 			projectRoot = "";
 			targets = (
 				29D13CD72D358257005E61EC /* SMOC */,
+				29A00D2A2D36664200F9A21A /* SMOCTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		29A00D292D36664200F9A21A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		29D13CD62D358257005E61EC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +176,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		29A00D272D36664200F9A21A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		29D13CD42D358257005E61EC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +192,51 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		29A00D302D36664200F9A21A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 29D13CD72D358257005E61EC /* SMOC */;
+			targetProxy = 29A00D2F2D36664200F9A21A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		29A00D322D36664200F9A21A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7ZPDPWR8XU;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jca.SMOCTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SMOC.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SMOC";
+			};
+			name = Debug;
+		};
+		29A00D332D36664200F9A21A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7ZPDPWR8XU;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jca.SMOCTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SMOC.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SMOC";
+			};
+			name = Release;
+		};
 		29D13CE42D358259005E61EC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -159,6 +271,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -179,11 +292,13 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.0.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -222,6 +337,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -236,10 +352,12 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.0.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -250,7 +368,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
 				DEVELOPMENT_ASSET_PATHS = "\"SMOC/Preview Content\"";
 				DEVELOPMENT_TEAM = 7ZPDPWR8XU;
 				ENABLE_PREVIEWS = YES;
@@ -266,7 +384,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = jca.SMOC;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -281,7 +399,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
 				DEVELOPMENT_ASSET_PATHS = "\"SMOC/Preview Content\"";
 				DEVELOPMENT_TEAM = 7ZPDPWR8XU;
 				ENABLE_PREVIEWS = YES;
@@ -297,7 +415,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = jca.SMOC;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -309,6 +427,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		29A00D312D36664200F9A21A /* Build configuration list for PBXNativeTarget "SMOCTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				29A00D322D36664200F9A21A /* Debug */,
+				29A00D332D36664200F9A21A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		29D13CD32D358257005E61EC /* Build configuration list for PBXProject "SMOC" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
