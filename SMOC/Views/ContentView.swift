@@ -14,7 +14,7 @@ struct ContentView: View {
     var body: some View {
         VStack {
             if videoManager.permissionGranted {
-                Text("Permissions: OK!")
+                VideoRecorderView()
             } else {
                 RequestPermissionView()
             }
