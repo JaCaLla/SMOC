@@ -12,6 +12,7 @@ protocol ReelManagerProtocol {
     var permissionGranted: Bool { get }
     func checkPermission() async
     func requestPermission() async -> Bool
+    func saveVideoToPhotoLibrary(fileURL: URL) async
 }
 
 final class ReelManager: ObservableObject {
@@ -50,4 +51,32 @@ extension ReelManager: ReelManagerProtocol {
             }
         }
     }
+    
+    func saveVideoToPhotoLibrary(fileURL: URL) async {
+        guard internalPermissionGranted else { return }
+        PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+        }) { success, error in
+            if success {
+                print("Video saved to photo library")
+            } else {
+                print("Error saving video to photo library: \(String(describing: error))")
+            }
+        }
+//            PHPhotoLibrary.requestAuthorization { status in
+//                guard status == .authorized else {
+//                    print("Photo Library access denied")
+//                    return
+//                }
+//                PHPhotoLibrary.shared().performChanges({
+//                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+//                }) { success, error in
+//                    if success {
+//                        print("Video saved to photo library")
+//                    } else {
+//                        print("Error saving video to photo library: \(String(describing: error))")
+//                    }
+//                }
+//            }
+        }
 }

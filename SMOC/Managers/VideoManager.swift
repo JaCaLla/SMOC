@@ -37,7 +37,7 @@ protocol VideoManagerProtocol {
     
     @Published var session = AVCaptureSession()
     private var videoOutput = AVCaptureMovieFileOutput()
-    private var outputFileURL: URL?
+    private var outputURL: URL?
     
     private let avCaptureDevice: AVCaptureDeviceProtocol.Type
 
@@ -74,7 +74,7 @@ protocol VideoManagerProtocol {
         
         let outputDir = FileManager.default.temporaryDirectory
         let outputFile = outputDir.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
-        outputFileURL = outputFile
+        outputURL = outputFile
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
@@ -97,6 +97,10 @@ extension VideoManager: AVCaptureFileOutputRecordingDelegate {
             print("Error durante la grabación: \(error.localizedDescription)")
         } else {
             print("Video guardado en \(outputFileURL.absoluteString)")
+        }
+        guard let outputURL = outputURL else { return }
+        Task {
+           await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: outputURL)
         }
     }
 }

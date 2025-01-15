@@ -10,40 +10,39 @@ import AVFoundation
 
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
-    @State private var orientation = UIDeviceOrientation.unknown
+  //  @State private var orientation = UIDeviceOrientation.unknown
+    @State private var isRecording = false
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.session)
                 .edgesIgnoringSafeArea(.all)
             VStack {
-                            Spacer()
-                            HStack {
-                                Button(action: {
-                                    videoManager.startRecording()
-                                }) {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 70, height: 70)
-                                }
-                                .padding()
-                                
-                                Button(action: {
-                                    videoManager.stopRecording()
-                                }) {
-                                    Circle()
-                                        .stroke(Color.white, lineWidth: 3)
-                                        .frame(width: 70, height: 70)
-                                }
-                                .padding()
-                            }
-                        }
+                Spacer()
+                Button(action: {
+                    isRecording.toggle()
+                    if isRecording {
+                        videoManager.startRecording()
+                    } else {
+                        videoManager.stopRecording()
+                    }
+                }) {
+                    Circle()
+                        .fill(isRecording ? Color.red : Color.white)
+                        .frame(width: 70, height: 70)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.gray, lineWidth: 2)
+                        )
+                }
+                .padding()
+            }
         }.onAppear {
             Task {
                 await videoManager.setupSession()
             }
-        }.onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+        }/*.onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
             orientation = UIDevice.current.orientation
-        }
+        }*/
         
     }
 }

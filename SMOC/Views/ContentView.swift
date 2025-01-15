@@ -28,10 +28,8 @@ struct ContentView: View {
         }
         .onAppear {
             Task {
-                await videoManager.checkPermission()
-            }
-            Task {
                 await reelManager.checkPermission()
+                await videoManager.checkPermission()
             }
         }
     }
