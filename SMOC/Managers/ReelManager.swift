@@ -63,20 +63,5 @@ extension ReelManager: ReelManagerProtocol {
                 print("Error saving video to photo library: \(String(describing: error))")
             }
         }
-//            PHPhotoLibrary.requestAuthorization { status in
-//                guard status == .authorized else {
-//                    print("Photo Library access denied")
-//                    return
-//                }
-//                PHPhotoLibrary.shared().performChanges({
-//                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-//                }) { success, error in
-//                    if success {
-//                        print("Video saved to photo library")
-//                    } else {
-//                        print("Error saving video to photo library: \(String(describing: error))")
-//                    }
-//                }
-//            }
         }
 }

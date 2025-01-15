@@ -11,11 +11,15 @@ import Foundation
 struct AppSingletons {
     var videoManager: VideoManager
     var reelManager: ReelManager
+    var fileStoreManager: FileStoreManager
     
     init(videoManager: VideoManager = VideoManager(),
-         reelManager: ReelManager = ReelManager()) {
+         reelManager: ReelManager = ReelManager(),
+         fileStoreManager: FileStoreManager? = nil) {
         self.videoManager = videoManager
         self.reelManager = reelManager
+        self.fileStoreManager = fileStoreManager ?? FileStoreManager()
+
     }
 }
 
