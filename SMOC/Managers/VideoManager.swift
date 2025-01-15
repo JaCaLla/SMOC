@@ -6,6 +6,7 @@
 //
 import AVFoundation
 import Foundation
+import UIKit
 
 protocol AVCaptureDeviceProtocol {
     static func authorizationStatus(for mediaType: AVMediaType) -> AVAuthorizationStatus
@@ -48,19 +49,16 @@ protocol VideoManagerProtocol {
     func setupSession() async {
         session.beginConfiguration()
         
-        // Configurar dispositivo de entrada (cámara trasera)
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: camera) else {
             print("No se pudo acceder a la cámara.")
             return
         }
         
-        // Añadir entrada
         if session.canAddInput(input) {
             session.addInput(input)
         }
         
-        // Añadir salida de video
         if session.canAddOutput(videoOutput) {
             session.addOutput(videoOutput)
         }
@@ -76,6 +74,12 @@ protocol VideoManagerProtocol {
         let outputFile = outputDir.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
         outputURL = outputFile
         
+        if let connection = videoOutput.connection(with: .video) {
+            if connection.isVideoOrientationSupported {
+                connection.videoOrientation = currentVideoOrientation()
+            }
+        }
+        
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
     }
@@ -88,6 +92,21 @@ protocol VideoManagerProtocol {
     
     func stopSession() {
         session.stopRunning()
+    }
+    
+    private func currentVideoOrientation() -> AVCaptureVideoOrientation {
+        switch UIDevice.current.orientation {
+        case .portrait:
+            return .portrait
+        case .landscapeLeft:
+            return .landscapeRight
+        case .landscapeRight:
+            return .landscapeLeft
+        case .portraitUpsideDown:
+            return .portraitUpsideDown
+        default:
+            return .portrait
+        }
     }
 }
 
