@@ -10,40 +10,52 @@ import AVFoundation
 
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
-  //  @State private var orientation = UIDeviceOrientation.unknown
-    @State private var isRecording = false
+    @Environment(\.scenePhase) var scenePhase
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.session)
                 .edgesIgnoringSafeArea(.all)
             VStack {
                 Spacer()
-                Button(action: {
-                    isRecording.toggle()
-                    if isRecording {
-                        videoManager.startRecording()
-                    } else {
+                if videoManager.recorderReady {
+                    Button(action: {
                         videoManager.stopRecording()
+                    }) {
+                        Circle()
+                            .fill( Color.red)
+                            .frame(width: 70, height: 70)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.gray, lineWidth: 2)
+                            )
                     }
-                }) {
-                    Circle()
-                        .fill(isRecording ? Color.red : Color.white)
-                        .frame(width: 70, height: 70)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.gray, lineWidth: 2)
-                        )
+                    .padding()
                 }
-                .padding()
+                
             }
         }.onAppear {
-            Task {
-                await videoManager.setupSession()
+            startRecording()
+        }.onChange(of: scenePhase) { newPhase in
+            switch newPhase {
+            case .active:
+                startRecording()
+                print("La aplicación está activa.")
+            case .inactive:
+                videoManager.stopSession(true)
+                print("La aplicación está inactiva.")
+            case .background:
+                print("La aplicación está en segundo plano.")
+            @unknown default:
+                print("Un estado desconocido ocurrió.")
             }
-        }/*.onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-            orientation = UIDevice.current.orientation
-        }*/
-        
+        }
+    }
+    
+    func startRecording() {
+        Task {
+            await videoManager.setupSession()
+            videoManager.startRecording()
+        }
     }
 }
 

@@ -23,6 +23,11 @@ protocol VideoManagerProtocol {
 
 /*final*/ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
+    let postRecordingSecs: TimeInterval = 8.0
+    let preRecordingSecs: TimeInterval = 5.0
+    
+    var stoppedSessionDueAppBackground = false
+    
     @MainActor
     @Published var permissionGranted: Bool = false
     
@@ -31,6 +36,19 @@ protocol VideoManagerProtocol {
             Task { [internalPermissionGranted] in
                 await MainActor.run {
                     self.permissionGranted = internalPermissionGranted
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    @Published var recorderReady: Bool = false
+    
+    private var internalRecorderReady: Bool = false {
+         didSet {
+            Task { [internalRecorderReady] in
+                await MainActor.run {
+                    self.recorderReady = internalRecorderReady
                 }
             }
         }
@@ -47,6 +65,7 @@ protocol VideoManagerProtocol {
     }
     
     func setupSession() async {
+
         session.beginConfiguration()
         
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
@@ -67,11 +86,16 @@ protocol VideoManagerProtocol {
         session.startRunning()
     }
     
+    private func getAnyFileURL() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
+    }
+    
     func startRecording() {
         guard !videoOutput.isRecording else { return }
         
-        let outputDir = FileManager.default.temporaryDirectory
-        let outputFile = outputDir.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
+        stoppedSessionDueAppBackground = false
+        
+        let outputFile = getAnyFileURL()
         outputURL = outputFile
         
         if let connection = videoOutput.connection(with: .video) {
@@ -82,16 +106,27 @@ protocol VideoManagerProtocol {
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
+            self?.internalRecorderReady = true
+        }
     }
     
     func stopRecording() {
         guard videoOutput.isRecording else { return }
-        videoOutput.stopRecording()
-        print("Grabación detenida.")
+        
+        internalRecorderReady = false
+        print("Recording will stop in \(postRecordingSecs) seconds")
+        DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
+            self?.videoOutput.stopRecording()
+            print("Recording Stopped.")
+        }
     }
     
-    func stopSession() {
+    func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
         session.stopRunning()
+        internalRecorderReady = false
+        self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
     }
     
     private func currentVideoOrientation() -> AVCaptureVideoOrientation {
@@ -113,15 +148,68 @@ protocol VideoManagerProtocol {
 extension VideoManager: AVCaptureFileOutputRecordingDelegate {
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         if let error = error {
-            print("Error durante la grabación: \(error.localizedDescription)")
-        } else {
-            print("Video guardado en \(outputFileURL.absoluteString)")
+            print("Error during recording: \(error.localizedDescription)")
+            //stopSession(true)
+            return
         }
-        guard let outputURL = outputURL else { return }
+        guard !stoppedSessionDueAppBackground else {
+            return
+        }
         Task {
-           await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: outputURL)
+            await moveToReelLastSecs(outputURL: outputURL)
         }
     }
+    
+    private func moveToReelLastSecs(outputURL: URL?) async {
+        guard let outputURL  else { return }
+        let lastSecsOutputURL = getAnyFileURL()
+        do {
+            let lastRecordingSecs = postRecordingSecs + preRecordingSecs
+            try await trimLastThirteenSeconds(last: lastRecordingSecs, from: outputURL, to: lastSecsOutputURL)
+        } catch {
+            print("Error on extracting last secs: \(error.localizedDescription)")
+        }
+        await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: lastSecsOutputURL)
+        print("Video stored at \(lastSecsOutputURL.absoluteString)")
+        startRecording()
+    }
+    
+    func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
+        
+        let asset = AVAsset(url: inputURL)
+        let duration = asset.duration
+        let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
+        let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
+        
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+            throw NSError(domain: "ExportSession", code: 0, userInfo: nil)
+        }
+        
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mov
+        exportSession.timeRange = timeRange
+        
+        // Await the export process
+        try await withCheckedThrowingContinuation { continuation in
+            exportSession.exportAsynchronously {
+                switch exportSession.status {
+                case .completed:
+                    continuation.resume()
+                case .failed:
+                    if let error = exportSession.error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(throwing: NSError(domain: "ExportSession", code: 2, userInfo: nil))
+                    }
+                case .cancelled:
+                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 1, userInfo: nil))
+                default:
+                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 3, userInfo: nil))
+                }
+            }
+        }
+    }
+    
 }
 
 extension VideoManager: VideoManagerProtocol {
