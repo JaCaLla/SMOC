@@ -83,6 +83,9 @@ struct CameraPreview: UIViewRepresentable {
         DispatchQueue.main.async {
             context.coordinator.updateVideoOrientation()
         }
+        
+        let pinchGesture = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePinchGesture(_:)))
+        videoPreviewView.addGestureRecognizer(pinchGesture)
 
         NotificationCenter.default.addObserver(
             context.coordinator,
@@ -130,6 +133,11 @@ struct CameraPreview: UIViewRepresentable {
                 previewLayer.setAffineTransform(.identity)
             }
             lastOrientation = orientation
+        }
+        
+        @MainActor
+        @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+            appSingletons.videoManager.handlePinchGesture(gesture)
         }
     }
 }

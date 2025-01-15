@@ -54,15 +54,40 @@ protocol VideoManagerProtocol {
         }
     }
     
-    @Published var session = AVCaptureSession()
+    @Published var session = AVCaptureSession() /// ??? publisheed ???!!!
     private var videoOutput = AVCaptureMovieFileOutput()
     private var outputURL: URL?
     
-    private let avCaptureDevice: AVCaptureDeviceProtocol.Type
+    /*private*/ let avCaptureDevice: AVCaptureDeviceProtocol.Type
 
     init(device: AVCaptureDeviceProtocol.Type = AVCaptureDevice.self) {
         self.avCaptureDevice = device
     }
+    
+    private var captureDevice: AVCaptureDevice?
+//    func getCaptureDevice() -> AVCaptureDevice? {
+//         captureDevice
+//    }
+    func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        guard let device = captureDevice else {
+            return
+        }
+        
+        // Ajustar el zoom
+        if gesture.state == .changed {
+            do {
+                try device.lockForConfiguration()
+                let zoomFactor = max(1.0, min(device.videoZoomFactor * gesture.scale, device.activeFormat.videoMaxZoomFactor))
+                print("zoomFactor: \(zoomFactor)")
+                device.videoZoomFactor = zoomFactor
+                device.unlockForConfiguration()
+            } catch {
+                print("Error al ajustar el zoom: \(error)")
+            }
+            gesture.scale = 1.0 // Reiniciar el escalado del gesto
+        }
+    }
+    
     
     func setupSession() async {
 
@@ -73,6 +98,7 @@ protocol VideoManagerProtocol {
             print("No se pudo acceder a la cámara.")
             return
         }
+        captureDevice = camera
         
         if session.canAddInput(input) {
             session.addInput(input)
