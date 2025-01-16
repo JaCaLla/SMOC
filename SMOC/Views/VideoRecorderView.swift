@@ -11,45 +11,46 @@ import AVFoundation
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
     @Environment(\.scenePhase) var scenePhase
-   // @State private var progress = 0.0
-   // @State private var timerRunning = false
+    let lowOpacity = 0.6
+    let highOpacity = 0.45
+    let progressHeight = 5.0
+    
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.session)
                 .edgesIgnoringSafeArea(.all)
             VStack {
-                Text(videoManager.state.description())
-                Text("\(videoManager.progress)")
                 Spacer()
-                if videoManager.recorderReady {
+                VStack(spacing: 0) {
                     Button(action: {
-                   //     startTimer(duration: videoManager.postRecordingSecs)
-                        videoManager.stopRecording()
+                        Task {
+                            await videoManager.stopRecording()
+                        }
                     }) {
-                        Circle()
-                            .fill( Color.red)
-                            .frame(width: 70, height: 70)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.gray, lineWidth: 2)
-                            )
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 100, height: 100)
+                            Image(systemName: videoManager.state.sfSymbolName())
+                                .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 80, height: 80)
+                                    .foregroundColor(videoManager.state == .ready ? .red : .gray)
+                        }.opacity(videoManager.state == .ready ? lowOpacity : highOpacity)
+
                     }
                     .padding()
-                }
-                switch videoManager.state {
-                case .notStarted:
-                    EmptyView()
-                case .preRecording:
-                    ProgressView(value: videoManager.progress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle())
-                case .ready:
-                    EmptyView()
-                case .postRecording:
-                    ProgressView(value: videoManager.progress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle())
-                case .transferingToReel:
-                    EmptyView()
-                
+                    progressView(for: videoManager.state, progress: videoManager.progress, progressHeight: progressHeight, lowOpacity: lowOpacity)
+//                    switch videoManager.state {
+//                    case .notStarted, .ready, .transferingToReel:
+//                        Spacer().frame(height: progressHeight)
+//                    case .preRecording, .postRecording:
+//                        let progressValue = videoManager.state == .postRecording ? min(videoManager.progress, 1.0) : videoManager.progress
+//                        ProgressView(value: progressValue, total: 1.0)
+//                            .progressViewStyle(LinearProgressViewStyle(tint: .gray))
+//                            .opacity(lowOpacity)
+//                            .frame(height: progressHeight)
+//                    }
                 }
                     
                
@@ -57,19 +58,33 @@ struct VideoRecorderView: View {
         }.onAppear {
           //  startTimer(duration: videoManager.preRecordingSecs)
             startRecording()
-        }.onChange(of: scenePhase) { newPhase in
+        }.onChange(of: scenePhase) { newPhase, _ in
             switch newPhase {
             case .active:
                 startRecording()
                 print("La aplicación está activa.")
             case .inactive:
-                videoManager.stopSession(true)
-                print("La aplicación está inactiva.")
-            case .background:
-                print("La aplicación está en segundo plano.")
-            @unknown default:
-                print("Un estado desconocido ocurrió.")
+                Task {
+                    await videoManager.stopSession(true)
+                }
+            case .background: break
+            @unknown default: break
             }
+        }
+    }
+    
+    func progressView(for state: VideoManagerState, progress: Double, progressHeight: CGFloat, lowOpacity: Double) -> some View {
+        switch state {
+        case .notStarted, .ready, .transferingToReel:
+            return AnyView(Spacer().frame(height: progressHeight))
+        case .preRecording, .postRecording:
+            let progressValue = state == .postRecording ? min(progress, 1.0) : progress
+            return AnyView(
+                ProgressView(value: progressValue, total: 1.0)
+                    .progressViewStyle(LinearProgressViewStyle(tint: .gray))
+                    .opacity(lowOpacity)
+                    .frame(height: progressHeight)
+            )
         }
     }
     

@@ -42,6 +42,21 @@ enum VideoManagerState {
             return "transferingToReel"
         }
     }
+    
+    func sfSymbolName() -> String {
+        switch self {
+        case .notStarted:
+            return "questionmark.video"
+        case .preRecording:
+            return "video.badge.ellipsis"
+        case .ready:
+            return "video.circle"
+        case .postRecording:
+            return "video.fill.badge.ellipsis"
+        case .transferingToReel:
+            return "video.fill.badge.checkmark"
+        }
+    }
 }
 
 @GlobalManager
@@ -65,6 +80,9 @@ enum VideoManagerState {
             }
         }
     }
+    
+    @MainActor
+    @Published var buttonSymbolName: String = "questionmark.video"
     
     @MainActor
     @Published var progress: Double = 0.0
@@ -105,6 +123,7 @@ enum VideoManagerState {
         }
     }
     
+    @MainActor
     @Published var session = AVCaptureSession() /// ??? publisheed ???!!!
     private var videoOutput = AVCaptureMovieFileOutput()
     private var outputURL: URL?
@@ -183,17 +202,23 @@ enum VideoManagerState {
         
         if let connection = videoOutput.connection(with: .video) {
             if connection.isVideoOrientationSupported {
-                connection.videoOrientation = currentVideoOrientation()
+                Task {
+                    connection.videoOrientation = await currentVideoOrientation()
+                }
+               
             }
         }
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
-            self?.state = .ready
-            self?.internalRecorderReady = true
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
+            Task { @GlobalManager in
+                self?.internalState = .ready
+                self?.internalRecorderReady = true
+            }
         }
+            
     }
         
     func stopRecording() {
@@ -203,13 +228,13 @@ enum VideoManagerState {
         
         internalRecorderReady = false
         print("Recording will stop in \(postRecordingSecs) seconds")
-        Task { @GlobalManager in
+       // Task { @GlobalManager in
             //DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
-            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
-                self?.videoOutput.stopRecording()
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + postRecordingSecs) { [videoOutput] in
+                videoOutput.stopRecording()
                 print("Recording Stopped.")
             }
-        }
+       // }
 
     }
     
@@ -218,9 +243,11 @@ enum VideoManagerState {
         session.stopRunning()
         internalRecorderReady = false
         self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
+        invalidateTimers()
     }
     
-    private func currentVideoOrientation() -> AVCaptureVideoOrientation {
+    @MainActor
+    private func currentVideoOrientation() async -> AVCaptureVideoOrientation {
         switch UIDevice.current.orientation {
         case .portrait:
             return .portrait
@@ -236,6 +263,7 @@ enum VideoManagerState {
     }
     
     var timerRunning = false
+    private var timer: DispatchSourceTimer?
     
     private func startTimer(duration: Double) {
         if timerRunning { return }
@@ -244,19 +272,45 @@ enum VideoManagerState {
 
         let interval = 0.1 // Actualización cada 0.1 segundos
         let step = interval / duration
-
-        Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-            if self?.internalProgress ?? 0.0 < 1.0 {
-                self?.internalProgress = min(self?.internalProgress ?? 0.0 + step, 1.0)
-            } else {
-                timer.invalidate()
-                self?.timerRunning = false
+        
+        let queue = DispatchQueue(label: "com.example.myTimerQueue")
+        timer = DispatchSource.makeTimerSource(queue: queue)
+        timer?.schedule(deadline: .now(), repeating: interval)
+        timer?.setEventHandler { [weak self] in
+            Task { //@MyGlobalActor in
+                guard let self else { return }
+                                if self.internalProgress < 1.0 {
+                                    self.internalProgress += step//min(self?.internalProgress ?? 0.0 + step, 1.0)
+                                    self.internalProgress = min(self.internalProgress  , 1.0)
+                                } else {
+                                    self.invalidateTimers()
+                                }
+             //   print("internalProgress:\(String(describing: self?.internalProgress))")
             }
         }
+
+        timer?.resume() // Iniciar el temporizador
+        
+//        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+//           // Task { @GlobalManager in
+//                if self?.internalProgress ?? 0.0 < 1.0 {
+//                    self?.internalProgress = min(self?.internalProgress ?? 0.0 + step, 1.0)
+//                } else {
+//                    self?.invalidateTimers()
+//                }
+//                print("internalProgress:\(self?.internalProgress)")
+//     //       }
+//        }
+    }
+    
+    private func invalidateTimers() {
+        timer?.cancel()
+        timer = nil
+        timerRunning = false
     }
 }
 
-extension VideoManager: AVCaptureFileOutputRecordingDelegate {
+extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         if let error = error {
             print("Error during recording: \(error.localizedDescription)")
@@ -266,7 +320,7 @@ extension VideoManager: AVCaptureFileOutputRecordingDelegate {
         guard !stoppedSessionDueAppBackground else {
             return
         }
-        Task {
+        Task { @GlobalManager in
             internalState = .transferingToReel
             await moveToReelLastSecs(outputURL: outputURL)
         }
