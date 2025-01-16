@@ -21,12 +21,63 @@ protocol VideoManagerProtocol {
     func requestPermission() async -> Bool
 }
 
+enum VideoManagerState {
+    case notStarted
+    case preRecording
+    case ready
+    case postRecording
+    case transferingToReel
+    
+    func description() -> String {
+        switch self {
+        case .notStarted:
+            return "not started"
+        case .preRecording:
+            return "pre recording"
+        case .ready:
+            return "ready"
+        case .postRecording:
+            return "post recording"
+        case .transferingToReel:
+            return "transferingToReel"
+        }
+    }
+}
+
+@GlobalManager
 /*final*/ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
     let postRecordingSecs: TimeInterval = 8.0
     let preRecordingSecs: TimeInterval = 5.0
     
     var stoppedSessionDueAppBackground = false
+    
+
+    @MainActor
+    @Published var state: VideoManagerState = .notStarted
+    
+    private var internalState: VideoManagerState = .notStarted {
+         didSet {
+            Task { [internalState] in
+                await MainActor.run {
+                    self.state = internalState
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    @Published var progress: Double = 0.0
+    private var internalProgress: Double = 0.0 {
+         didSet {
+            Task { [internalProgress] in
+                await MainActor.run {
+                    self.progress = internalProgress
+                }
+            }
+        }
+    }
+    
     
     @MainActor
     @Published var permissionGranted: Bool = false
@@ -59,7 +110,7 @@ protocol VideoManagerProtocol {
     private var outputURL: URL?
     
     /*private*/ let avCaptureDevice: AVCaptureDeviceProtocol.Type
-
+    @MainActor
     init(device: AVCaptureDeviceProtocol.Type = AVCaptureDevice.self) {
         self.avCaptureDevice = device
     }
@@ -68,23 +119,27 @@ protocol VideoManagerProtocol {
 //    func getCaptureDevice() -> AVCaptureDevice? {
 //         captureDevice
 //    }
-    func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+    
+    func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) async {
         guard let device = captureDevice else {
             return
         }
         
         // Ajustar el zoom
-        if gesture.state == .changed {
+        if await gesture.state == .changed {
             do {
                 try device.lockForConfiguration()
-                let zoomFactor = max(1.0, min(device.videoZoomFactor * gesture.scale, device.activeFormat.videoMaxZoomFactor))
+                let videoZoomFactor = await device.videoZoomFactor * gesture.scale
+                let zoomFactor = max(1.0, min(videoZoomFactor, device.activeFormat.videoMaxZoomFactor))
                 print("zoomFactor: \(zoomFactor)")
                 device.videoZoomFactor = zoomFactor
                 device.unlockForConfiguration()
             } catch {
                 print("Error al ajustar el zoom: \(error)")
             }
-            gesture.scale = 1.0 // Reiniciar el escalado del gesto
+            Task { @MainActor in
+                gesture.scale = 1.0 // Reiniciar el escalado del gesto
+            }
         }
     }
     
@@ -117,6 +172,8 @@ protocol VideoManagerProtocol {
     }
     
     func startRecording() {
+        internalState = .preRecording
+        startTimer(duration: preRecordingSecs)
         guard !videoOutput.isRecording else { return }
         
         stoppedSessionDueAppBackground = false
@@ -134,22 +191,30 @@ protocol VideoManagerProtocol {
         print("Iniciando grabación en \(outputFile.absoluteString)")
         
         DispatchQueue.main.asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
+            self?.state = .ready
             self?.internalRecorderReady = true
         }
     }
-    
+        
     func stopRecording() {
+        internalState = .postRecording
+        startTimer(duration: postRecordingSecs)
         guard videoOutput.isRecording else { return }
         
         internalRecorderReady = false
         print("Recording will stop in \(postRecordingSecs) seconds")
-        DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
-            self?.videoOutput.stopRecording()
-            print("Recording Stopped.")
+        Task { @GlobalManager in
+            //DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
+                self?.videoOutput.stopRecording()
+                print("Recording Stopped.")
+            }
         }
+
     }
     
     func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
+        internalState = .notStarted
         session.stopRunning()
         internalRecorderReady = false
         self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
@@ -169,6 +234,26 @@ protocol VideoManagerProtocol {
             return .portrait
         }
     }
+    
+    var timerRunning = false
+    
+    private func startTimer(duration: Double) {
+        if timerRunning { return }
+        timerRunning = true
+        internalProgress = 0.0
+
+        let interval = 0.1 // Actualización cada 0.1 segundos
+        let step = interval / duration
+
+        Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+            if self?.internalProgress ?? 0.0 < 1.0 {
+                self?.internalProgress = min(self?.internalProgress ?? 0.0 + step, 1.0)
+            } else {
+                timer.invalidate()
+                self?.timerRunning = false
+            }
+        }
+    }
 }
 
 extension VideoManager: AVCaptureFileOutputRecordingDelegate {
@@ -182,6 +267,7 @@ extension VideoManager: AVCaptureFileOutputRecordingDelegate {
             return
         }
         Task {
+            internalState = .transferingToReel
             await moveToReelLastSecs(outputURL: outputURL)
         }
     }
@@ -238,7 +324,7 @@ extension VideoManager: AVCaptureFileOutputRecordingDelegate {
     
 }
 
-extension VideoManager: VideoManagerProtocol {
+extension VideoManager: @preconcurrency VideoManagerProtocol {
     func checkPermission() async {
         switch avCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:

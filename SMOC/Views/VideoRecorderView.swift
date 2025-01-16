@@ -11,14 +11,19 @@ import AVFoundation
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
     @Environment(\.scenePhase) var scenePhase
+   // @State private var progress = 0.0
+   // @State private var timerRunning = false
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.session)
                 .edgesIgnoringSafeArea(.all)
             VStack {
+                Text(videoManager.state.description())
+                Text("\(videoManager.progress)")
                 Spacer()
                 if videoManager.recorderReady {
                     Button(action: {
+                   //     startTimer(duration: videoManager.postRecordingSecs)
                         videoManager.stopRecording()
                     }) {
                         Circle()
@@ -31,9 +36,26 @@ struct VideoRecorderView: View {
                     }
                     .padding()
                 }
+                switch videoManager.state {
+                case .notStarted:
+                    EmptyView()
+                case .preRecording:
+                    ProgressView(value: videoManager.progress, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle())
+                case .ready:
+                    EmptyView()
+                case .postRecording:
+                    ProgressView(value: videoManager.progress, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle())
+                case .transferingToReel:
+                    EmptyView()
                 
+                }
+                    
+               
             }
         }.onAppear {
+          //  startTimer(duration: videoManager.preRecordingSecs)
             startRecording()
         }.onChange(of: scenePhase) { newPhase in
             switch newPhase {
@@ -137,7 +159,10 @@ struct CameraPreview: UIViewRepresentable {
         
         @MainActor
         @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-            appSingletons.videoManager.handlePinchGesture(gesture)
+            Task {
+                await appSingletons.videoManager.handlePinchGesture(gesture)
+            }
+            
         }
     }
 }
