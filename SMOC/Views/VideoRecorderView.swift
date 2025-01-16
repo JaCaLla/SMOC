@@ -17,7 +17,7 @@ struct VideoRecorderView: View {
     
     var body: some View {
         ZStack {
-            CameraPreview(session: videoManager.session)
+            CameraPreview(session: videoManager.avCaptureSession)
                 .edgesIgnoringSafeArea(.all)
             VStack {
                 Spacer()
@@ -40,23 +40,20 @@ struct VideoRecorderView: View {
 
                     }
                     .padding()
-                    progressView(for: videoManager.state, progress: videoManager.progress, progressHeight: progressHeight, lowOpacity: lowOpacity)
-//                    switch videoManager.state {
-//                    case .notStarted, .ready, .transferingToReel:
-//                        Spacer().frame(height: progressHeight)
-//                    case .preRecording, .postRecording:
-//                        let progressValue = videoManager.state == .postRecording ? min(videoManager.progress, 1.0) : videoManager.progress
-//                        ProgressView(value: progressValue, total: 1.0)
-//                            .progressViewStyle(LinearProgressViewStyle(tint: .gray))
-//                            .opacity(lowOpacity)
-//                            .frame(height: progressHeight)
-//                    }
+                    switch videoManager.state {
+                    case .notStarted, .ready, .transferingToReel:
+                        Spacer().frame(height: progressHeight)
+                    case .preRecording, .postRecording:
+                        ProgressView(value: min(videoManager.progress, 1.0), total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .gray))
+                            .opacity(lowOpacity)
+                            .frame(height: progressHeight)
+                    }
                 }
                     
                
             }
         }.onAppear {
-          //  startTimer(duration: videoManager.preRecordingSecs)
             startRecording()
         }.onChange(of: scenePhase) { newPhase, _ in
             switch newPhase {
@@ -73,14 +70,19 @@ struct VideoRecorderView: View {
         }
     }
     
-    func progressView(for state: VideoManagerState, progress: Double, progressHeight: CGFloat, lowOpacity: Double) -> some View {
+    func progressView(
+        for state: VideoManagerState,
+        progress: Binding<Double>,
+        progressHeight: CGFloat,
+        lowOpacity: Double
+    ) -> some View {
         switch state {
         case .notStarted, .ready, .transferingToReel:
             return AnyView(Spacer().frame(height: progressHeight))
         case .preRecording, .postRecording:
-            let progressValue = state == .postRecording ? min(progress, 1.0) : progress
+           // let progressValue = state == .postRecording ? min(progress.wrappedValue, 1.0) : 0.0
             return AnyView(
-                ProgressView(value: progressValue, total: 1.0)
+                ProgressView(value: progress.wrappedValue, total: 1.0)
                     .progressViewStyle(LinearProgressViewStyle(tint: .gray))
                     .opacity(lowOpacity)
                     .frame(height: progressHeight)

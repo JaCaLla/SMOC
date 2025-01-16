@@ -67,7 +67,6 @@ enum VideoManagerState {
     
     var stoppedSessionDueAppBackground = false
     
-
     @MainActor
     @Published var state: VideoManagerState = .notStarted
     
@@ -124,23 +123,30 @@ enum VideoManagerState {
     }
     
     @MainActor
-    @Published var session = AVCaptureSession() /// ??? publisheed ???!!!
+    @Published var avCaptureSession: AVCaptureSession = AVCaptureSession()
+    private var internalAVCaptureSession: AVCaptureSession?  {
+         didSet {
+            Task { [internalRecorderReady] in
+                await MainActor.run {
+                    self.recorderReady = internalRecorderReady
+                }
+            }
+        }
+    }
+    
+    private var avCaptureDevice: AVCaptureDevice?
     private var videoOutput = AVCaptureMovieFileOutput()
     private var outputURL: URL?
     
-    /*private*/ let avCaptureDevice: AVCaptureDeviceProtocol.Type
+    let avCaptureDeviceRequestPermission: AVCaptureDeviceProtocol.Type
+    
     @MainActor
     init(device: AVCaptureDeviceProtocol.Type = AVCaptureDevice.self) {
-        self.avCaptureDevice = device
+        self.avCaptureDeviceRequestPermission = device
     }
     
-    private var captureDevice: AVCaptureDevice?
-//    func getCaptureDevice() -> AVCaptureDevice? {
-//         captureDevice
-//    }
-    
     func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) async {
-        guard let device = captureDevice else {
+        guard let device = avCaptureDevice else {
             return
         }
         
@@ -165,25 +171,29 @@ enum VideoManagerState {
     
     func setupSession() async {
 
-        session.beginConfiguration()
+        internalAVCaptureSession = await Task { @MainActor in
+            return avCaptureSession
+        }.value
+
+        internalAVCaptureSession?.beginConfiguration()
         
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: camera) else {
-            print("No se pudo acceder a la cámara.")
+        guard let avCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: avCaptureDevice) else {
+            print("Not possible having access to camera")
             return
         }
-        captureDevice = camera
+        self.avCaptureDevice = avCaptureDevice
         
-        if session.canAddInput(input) {
-            session.addInput(input)
+        if internalAVCaptureSession?.canAddInput(input) ?? false {
+            internalAVCaptureSession?.addInput(input)
         }
         
-        if session.canAddOutput(videoOutput) {
-            session.addOutput(videoOutput)
+        if internalAVCaptureSession?.canAddOutput(videoOutput) ?? false {
+            internalAVCaptureSession?.addOutput(videoOutput)
         }
         
-        session.commitConfiguration()
-        session.startRunning()
+        internalAVCaptureSession?.commitConfiguration()
+        internalAVCaptureSession?.startRunning()
     }
     
     private func getAnyFileURL() -> URL {
@@ -240,7 +250,7 @@ enum VideoManagerState {
     
     func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
         internalState = .notStarted
-        session.stopRunning()
+        internalAVCaptureSession?.stopRunning()
         internalRecorderReady = false
         self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
         invalidateTimers()
@@ -380,7 +390,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
 
 extension VideoManager: @preconcurrency VideoManagerProtocol {
     func checkPermission() async {
-        switch avCaptureDevice.authorizationStatus(for: .video) {
+        switch avCaptureDeviceRequestPermission.authorizationStatus(for: .video) {
         case .authorized:
             internalPermissionGranted = true
         case .notDetermined:
@@ -392,7 +402,7 @@ extension VideoManager: @preconcurrency VideoManagerProtocol {
     
     func requestPermission() async -> Bool {
         return await withCheckedContinuation { continuation in
-            avCaptureDevice.requestAccess(for: .video) { granted in
+            avCaptureDeviceRequestPermission.requestAccess(for: .video) { granted in
                 continuation.resume(returning: granted)
             }
         }
