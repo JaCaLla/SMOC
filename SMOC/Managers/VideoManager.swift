@@ -294,22 +294,11 @@ enum VideoManagerState {
                                 } else {
                                     self.invalidateTimers()
                                 }
-             //   print("internalProgress:\(String(describing: self?.internalProgress))")
             }
         }
 
         timer?.resume() // Iniciar el temporizador
         
-//        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-//           // Task { @GlobalManager in
-//                if self?.internalProgress ?? 0.0 < 1.0 {
-//                    self?.internalProgress = min(self?.internalProgress ?? 0.0 + step, 1.0)
-//                } else {
-//                    self?.invalidateTimers()
-//                }
-//                print("internalProgress:\(self?.internalProgress)")
-//     //       }
-//        }
     }
     
     private func invalidateTimers() {
@@ -340,7 +329,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         let lastSecsOutputURL = getAnyFileURL()
         do {
             let lastRecordingSecs = postRecordingSecs + preRecordingSecs
-            try await trimLastThirteenSeconds(last: lastRecordingSecs, from: outputURL, to: lastSecsOutputURL)
+            try await trimLastSeconds(last: lastRecordingSecs, from: outputURL, to: lastSecsOutputURL)
         } catch {
             print("Error on extracting last secs: \(error.localizedDescription)")
         }
@@ -349,20 +338,114 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         startRecording()
     }
     
-    func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
-        
-        let asset = AVAsset(url: inputURL)
+    func trimLastSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
+        let asset = AVURLAsset(url: inputURL)
         let duration = asset.duration
         let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         
-        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
-            throw NSError(domain: "ExportSession", code: 0, userInfo: nil)
+        let composition = AVMutableComposition()
+        
+        guard
+          let compositionTrack = composition.addMutableTrack(
+            withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+          let assetTrack = asset.tracks(withMediaType: .video).first
+          else {
+            print("Something is wrong with the asset.")
+            return
         }
         
-        exportSession.outputURL = outputURL
+        do {
+          //let timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+          try compositionTrack.insertTimeRange(timeRange, of: assetTrack, at: .zero)
+          
+          if let audioAssetTrack = asset.tracks(withMediaType: .audio).first,
+            let compositionAudioTrack = composition.addMutableTrack(
+              withMediaType: .audio,
+              preferredTrackID: kCMPersistentTrackID_Invalid) {
+            try compositionAudioTrack.insertTimeRange(
+              timeRange,
+              of: audioAssetTrack,
+              at: .zero)
+          }
+        } catch {
+          print(error)
+       //   onComplete(nil)
+          return
+        }
+        
+        compositionTrack.preferredTransform = assetTrack.preferredTransform
+        let videoInfo = orientation(from: assetTrack.preferredTransform)
+        
+        let videoSize: CGSize
+        if videoInfo.isPortrait {
+          videoSize = CGSize(
+            width: assetTrack.naturalSize.height,
+            height: assetTrack.naturalSize.width)
+        } else {
+          videoSize = assetTrack.naturalSize
+        }
+        
+       // let backgroundLayer = CALayer()
+       // backgroundLayer.frame = CGRect(origin: .zero, size: videoSize)
+        let videoLayer = CALayer()
+        videoLayer.frame = CGRect(origin: .zero, size: videoSize)
+        let overlayLayer = CALayer()
+        overlayLayer.frame = CGRect(origin: .zero, size: videoSize)
+        
+        add(
+          text: "Happy Birthday,\n",
+          to: overlayLayer,
+          videoSize: videoSize)
+        
+        let outputLayer = CALayer()
+        outputLayer.frame = CGRect(origin: .zero, size: videoSize)
+      //  outputLayer.addSublayer(backgroundLayer)
+        outputLayer.addSublayer(videoLayer)
+        outputLayer.addSublayer(overlayLayer)
+        
+        let videoComposition = AVMutableVideoComposition()
+        videoComposition.renderSize = videoSize
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(
+          postProcessingAsVideoLayer: videoLayer,
+          in: outputLayer)
+        
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(
+          start: .zero,
+          duration: composition.duration)
+        videoComposition.instructions = [instruction]
+        let layerInstruction = compositionLayerInstruction(
+          for: compositionTrack,
+          assetTrack: assetTrack)
+        instruction.layerInstructions = [layerInstruction]
+        
+//        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+//            throw NSError(domain: "ExportSession", code: 0, userInfo: nil)
+//        }
+//        
+//        exportSession.outputURL = outputURL
+//        exportSession.outputFileType = .mov
+//        exportSession.timeRange = timeRange
+        
+//        let videoName = UUID().uuidString
+//        let exportURL = URL(fileURLWithPath: NSTemporaryDirectory())
+//          .appendingPathComponent(videoName)
+//          .appendingPathExtension("mov")
+        
+        guard let exportSession = AVAssetExportSession(
+          asset: composition,
+          presetName: AVAssetExportPresetHighestQuality)
+          else {
+            print("Cannot create export session.")
+         //   onComplete(nil)
+            return
+        }
+        
+        exportSession.videoComposition = videoComposition
         exportSession.outputFileType = .mov
-        exportSession.timeRange = timeRange
+        exportSession.outputURL = outputURL
         
         // Await the export process
         try await withCheckedThrowingContinuation { continuation in
@@ -383,6 +466,71 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
                 }
             }
         }
+    }
+    
+    private func orientation(from transform: CGAffineTransform) -> (orientation: UIImage.Orientation, isPortrait: Bool) {
+      var assetOrientation = UIImage.Orientation.up
+      var isPortrait = false
+      if transform.a == 0 && transform.b == 1.0 && transform.c == -1.0 && transform.d == 0 {
+        assetOrientation = .right
+        isPortrait = true
+      } else if transform.a == 0 && transform.b == -1.0 && transform.c == 1.0 && transform.d == 0 {
+        assetOrientation = .left
+        isPortrait = true
+      } else if transform.a == 1.0 && transform.b == 0 && transform.c == 0 && transform.d == 1.0 {
+        assetOrientation = .up
+      } else if transform.a == -1.0 && transform.b == 0 && transform.c == 0 && transform.d == -1.0 {
+        assetOrientation = .down
+      }
+      
+      return (assetOrientation, isPortrait)
+    }
+    
+    private func compositionLayerInstruction(for track: AVCompositionTrack, assetTrack: AVAssetTrack) -> AVMutableVideoCompositionLayerInstruction {
+      let instruction = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+      let transform = assetTrack.preferredTransform
+      
+      instruction.setTransform(transform, at: .zero)
+      
+      return instruction
+    }
+    
+    private func add(text: String, to layer: CALayer, videoSize: CGSize) {
+      let attributedText = NSAttributedString(
+        string: text,
+        attributes: [
+          .font: UIFont(name: "ArialRoundedMTBold", size: 60) as Any,
+          .foregroundColor: UIColor.electricYellow,
+          .strokeColor: UIColor.white,
+          .strokeWidth: -3])
+      
+      let textLayer = CATextLayer()
+      textLayer.string = attributedText
+      textLayer.shouldRasterize = true
+      textLayer.rasterizationScale = UIScreen.main.scale
+      textLayer.backgroundColor = UIColor.clear.cgColor
+      textLayer.alignmentMode = .center
+      
+      textLayer.frame = CGRect(
+        x: 0,
+        y: videoSize.height * 0.66,
+        width: videoSize.width,
+        height: 150)
+      textLayer.displayIfNeeded()
+      
+      let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
+      scaleAnimation.fromValue = 0.8
+      scaleAnimation.toValue = 1.2
+      scaleAnimation.duration = 0.5
+      scaleAnimation.repeatCount = .greatestFiniteMagnitude
+      scaleAnimation.autoreverses = true
+      scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+      
+      scaleAnimation.beginTime = AVCoreAnimationBeginTimeAtZero
+      scaleAnimation.isRemovedOnCompletion = false
+      textLayer.add(scaleAnimation, forKey: "scale")
+      
+      layer.addSublayer(textLayer)
     }
     
 }
