@@ -10,11 +10,12 @@ import AVFoundation
 
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
+    @StateObject var locationManager = appSingletons.locationManager
     @Environment(\.scenePhase) var scenePhase
     let lowOpacity = 0.6
     let highOpacity = 0.45
     let progressHeight = 5.0
-    
+        
     var body: some View {
         ZStack {
             CameraPreview(session: videoManager.avCaptureSession)
@@ -22,6 +23,22 @@ struct VideoRecorderView: View {
             VStack {
                 Spacer()
                 VStack(spacing: 0) {
+                    if let townAndProvince = locationManager.townAndProvince {
+                        Text(townAndProvince)
+                            .font(.townProviceFont)
+                    }
+                    Spacer()
+                    if let currentSpeed = locationManager.currentSpeed,
+                       let currentSpeedUnits = locationManager.currentSpeedUnits  {
+                        HStack(alignment: .lastTextBaseline) {
+                            Text(currentSpeed)
+                                .font(.currentSpeedFont)
+                            Text(currentSpeedUnits)
+                                .font(.currentSpeedUnitsFont)
+                                
+                        }
+                    }
+                    Spacer()
                     Button(action: {
                         Task {
                             await videoManager.stopRecording()
@@ -50,8 +67,6 @@ struct VideoRecorderView: View {
                             .frame(height: progressHeight)
                     }
                 }
-                    
-               
             }
         }.onAppear {
             startRecording()

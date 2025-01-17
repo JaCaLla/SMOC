@@ -12,11 +12,13 @@ struct ContentView: View {
     @State private var showAlertPermissions = false
     @StateObject var videoManager = appSingletons.videoManager
     @StateObject var reelManager = appSingletons.reelManager
+    @StateObject var locationManager = appSingletons.locationManager
     
     var body: some View {
         VStack {
             if videoManager.permissionGranted,
-               reelManager.permissionGranted {
+               reelManager.permissionGranted,
+               locationManager.permissionGranted {
                 VideoRecorderView()
             } else {
                 RequestPermissionView()
@@ -30,6 +32,7 @@ struct ContentView: View {
             Task {
                 await reelManager.checkPermission()
                 await videoManager.checkPermission()
+                locationManager.checkPermission()
             }
         }
     }

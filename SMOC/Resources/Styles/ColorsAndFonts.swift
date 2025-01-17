@@ -38,6 +38,9 @@ extension Font {
     
     static let alertMessageFont =  Font.system(size: 20, weight: .black)
     static let alertMessageButtonFont =  Font.system(size: 20, weight: .black)
+    static let currentSpeedFont =  Font.system(size: 150, weight: .black)
+    static let currentSpeedUnitsFont =  Font.system(size: 20, weight: .black)
+    static let townProviceFont =  Font.system(size: 15, weight: .black)
     
     static let splashAppFont =  Font.system(size: 75, weight: .black)
     

@@ -374,6 +374,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To record videos, the app needs access to your camera. ";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Speedmeter requires Location Always Services";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Seedmeter requires Location Services";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To record videos with audio, the app needs access to your microphone. ";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To store video clips, the app requires permission to write to your device's photo gallery";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -405,6 +407,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To record videos, the app needs access to your camera. ";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Speedmeter requires Location Always Services";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Seedmeter requires Location Services";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To record videos with audio, the app needs access to your microphone. ";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To store video clips, the app requires permission to write to your device's photo gallery";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

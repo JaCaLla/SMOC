@@ -22,13 +22,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To record video clips and save them to your device's gallery, permission is required to access the camera, microphone, and photo gallery."
+            "value" : "To record video clips and save them to your device's gallery, permission is required to access the camera, microphone, and photo gallery. Speedometer also requires location device services."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para grabar videoclips y guardarlos en la galería de su dispositivo, se requiere permiso para acceder a la cámara, el micrófono y la galería de fotos."
+            "value" : "Para grabar videoclips y guardarlos en la galería de su dispositivo, se requiere permiso para acceder a la cámara, el micrófono y la galería de fotos. El velocímetro también require de los servicios de localización del dispositivo."
           }
         }
       }

@@ -98,7 +98,6 @@ enum VideoManagerState {
     
     @MainActor
     @Published var permissionGranted: Bool = false
-    
     private var internalPermissionGranted: Bool = false {
          didSet {
             Task { [internalPermissionGranted] in
