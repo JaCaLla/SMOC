@@ -107,9 +107,14 @@ extension LocationManager: CLLocationManagerDelegate {
     }
     
     private func getSpeed(_ currentLocation: CLLocation) -> String {
-        let speedValue = max(0, currentLocation.speed)
-        let speedInCorrectUnit = isMetric() ? speedValue * 3.6 : speedValue * 2.23694
-        return String(format: "%d", speedInCorrectUnit)
+//        let speedValue = max(0, currentLocation.speed)
+//        let speedInCorrectUnit = isMetric() ? speedValue * 3.6 : speedValue * 2.23694
+//        return String(format: "%d", speedInCorrectUnit)
+        let speedMeasurement = Measurement(value: max(0, currentLocation.speed), unit: UnitSpeed.metersPerSecond)
+        let localizedUnit = Locale.current.usesMetricSystem ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+        let localizedSpeed = speedMeasurement.converted(to: localizedUnit)
+//min(max(0,localizedSpeed.value),150)
+        return String(format: "%.0f", localizedSpeed.value )
     }
     
     private func isMetric() -> Bool {

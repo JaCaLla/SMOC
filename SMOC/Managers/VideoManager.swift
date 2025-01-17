@@ -169,7 +169,7 @@ enum VideoManagerState {
     
     
     func setupSession() async {
-
+        print(">>> setupSession")
         internalAVCaptureSession = await Task { @MainActor in
             return avCaptureSession
         }.value
@@ -200,6 +200,7 @@ enum VideoManagerState {
     }
     
     func startRecording() {
+        print(">>> startRecording")
         internalState = .preRecording
         startTimer(duration: preRecordingSecs)
         guard !videoOutput.isRecording else { return }
@@ -213,6 +214,7 @@ enum VideoManagerState {
             if connection.isVideoOrientationSupported {
                 Task {
                     connection.videoOrientation = await currentVideoOrientation()
+                    print("Iniciando grabación en \(connection.videoOrientation)")
                 }
                
             }
@@ -231,6 +233,7 @@ enum VideoManagerState {
     }
         
     func stopRecording() {
+        print(">>> stopRecording")
         internalState = .postRecording
         startTimer(duration: postRecordingSecs)
         guard videoOutput.isRecording else { return }
@@ -248,6 +251,7 @@ enum VideoManagerState {
     }
     
     func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
+        print(">>> stopSession")
         internalState = .notStarted
         internalAVCaptureSession?.stopRunning()
         internalRecorderReady = false
@@ -329,13 +333,49 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         let lastSecsOutputURL = getAnyFileURL()
         do {
             let lastRecordingSecs = postRecordingSecs + preRecordingSecs
-            try await trimLastSeconds(last: lastRecordingSecs, from: outputURL, to: lastSecsOutputURL)
+            try await trimLastThirteenSeconds(last: lastRecordingSecs, from: outputURL, to: lastSecsOutputURL)
         } catch {
             print("Error on extracting last secs: \(error.localizedDescription)")
         }
         await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: lastSecsOutputURL)
         print("Video stored at \(lastSecsOutputURL.absoluteString)")
         startRecording()
+    }
+    
+    func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
+        
+        let asset = AVAsset(url: inputURL)
+        let duration = asset.duration
+        let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
+        let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
+        
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+            throw NSError(domain: "ExportSession", code: 0, userInfo: nil)
+        }
+        
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mov
+        exportSession.timeRange = timeRange
+        
+        // Await the export process
+        try await withCheckedThrowingContinuation { continuation in
+            exportSession.exportAsynchronously {
+                switch exportSession.status {
+                case .completed:
+                    continuation.resume()
+                case .failed:
+                    if let error = exportSession.error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(throwing: NSError(domain: "ExportSession", code: 2, userInfo: nil))
+                    }
+                case .cancelled:
+                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 1, userInfo: nil))
+                default:
+                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 3, userInfo: nil))
+                }
+            }
+        }
     }
     
     func trimLastSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {

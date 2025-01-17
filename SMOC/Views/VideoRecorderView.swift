@@ -18,8 +18,10 @@ struct VideoRecorderView: View {
         
     var body: some View {
         ZStack {
-            CameraPreview(session: videoManager.avCaptureSession)
-                .edgesIgnoringSafeArea(.all)
+            if scenePhase == .active {
+                CameraPreview(session: videoManager.avCaptureSession)
+                    .edgesIgnoringSafeArea(.all)
+            }
             VStack {
                 Spacer()
                 VStack(spacing: 0) {
@@ -70,16 +72,21 @@ struct VideoRecorderView: View {
             }
         }.onAppear {
             startRecording()
-        }.onChange(of: scenePhase) { newPhase, _ in
+        }.onChange(of: scenePhase) { _ , newPhase in
             switch newPhase {
             case .active:
                 startRecording()
                 print("La aplicación está activa.")
             case .inactive:
+                print("La aplicación está inactivation.")
                 Task {
                     await videoManager.stopSession(true)
                 }
-            case .background: break
+            case .background:
+                print("La aplicación está en background.")
+                Task {
+                    await videoManager.stopSession(true)
+                }
             @unknown default: break
             }
         }
@@ -108,7 +115,7 @@ struct VideoRecorderView: View {
     func startRecording() {
         Task {
             await videoManager.setupSession()
-            videoManager.startRecording()
+            await videoManager.startRecording()
         }
     }
 }

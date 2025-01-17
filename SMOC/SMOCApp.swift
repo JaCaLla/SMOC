@@ -15,6 +15,7 @@ struct SMOCApp: App {
         WindowGroup {
             ContentView()
                 .task {
+                    UIApplication.shared.isIdleTimerDisabled = true
                     await appSingletons.fileStoreManager.clearTemporaryDirectory()
                 }
         }
