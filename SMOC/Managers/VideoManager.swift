@@ -344,8 +344,8 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
     
     func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
         
-        let asset = AVAsset(url: inputURL)
-        let duration = asset.duration
+        let asset = AVURLAsset(url: inputURL)
+        let duration = try await asset.load(.duration)
         let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         
@@ -357,25 +357,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         exportSession.outputFileType = .mov
         exportSession.timeRange = timeRange
         
-        // Await the export process
-        try await withCheckedThrowingContinuation { continuation in
-            exportSession.exportAsynchronously {
-                switch exportSession.status {
-                case .completed:
-                    continuation.resume()
-                case .failed:
-                    if let error = exportSession.error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(throwing: NSError(domain: "ExportSession", code: 2, userInfo: nil))
-                    }
-                case .cancelled:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 1, userInfo: nil))
-                default:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 3, userInfo: nil))
-                }
-            }
-        }
+        try await  exportSession.export(to: outputURL, as: .mov)
     }
     
     func trimLastSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
