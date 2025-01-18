@@ -111,7 +111,13 @@ extension LocationManager: CLLocationManagerDelegate {
 //        let speedInCorrectUnit = isMetric() ? speedValue * 3.6 : speedValue * 2.23694
 //        return String(format: "%d", speedInCorrectUnit)
         let speedMeasurement = Measurement(value: max(0, currentLocation.speed), unit: UnitSpeed.metersPerSecond)
-        let localizedUnit = Locale.current.usesMetricSystem ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+        let localizedUnit: UnitSpeed = {
+                if #available(iOS 16.0, *) {
+                    return Locale.current.measurementSystem == .metric ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+                } else {
+                    return Locale.current.usesMetricSystem ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+                }
+            }()
         let localizedSpeed = speedMeasurement.converted(to: localizedUnit)
 //min(max(0,localizedSpeed.value),150)
         return String(format: "%.0f", localizedSpeed.value )

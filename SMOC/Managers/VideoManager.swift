@@ -199,7 +199,7 @@ enum VideoManagerState {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
     }
     
-    func startRecording() {
+    func startRecording() async {
         print(">>> startRecording")
         internalState = .preRecording
         startTimer(duration: preRecordingSecs)
@@ -210,13 +210,24 @@ enum VideoManagerState {
         let outputFile = getAnyFileURL()
         outputURL = outputFile
         
+//        if let connection = videoOutput.connection(with: .video) {
+//            if connection.isVideoOrientationSupported {
+//                Task {
+//                    connection.videoOrientation = await currentVideoOrientation()
+//                    print("Iniciando grabación en \(connection.videoOrientation)")
+//                }
+//               
+//            }
+//        }
+        
         if let connection = videoOutput.connection(with: .video) {
-            if connection.isVideoOrientationSupported {
+            let angle: CGFloat = await currentVideoRotationAngle()
+            if connection.isVideoRotationAngleSupported(angle) {
                 Task {
-                    connection.videoOrientation = await currentVideoOrientation()
-                    print("Iniciando grabación en \(connection.videoOrientation)")
+                    let angle = await currentVideoRotationAngle()
+                    connection.videoRotationAngle = angle
+                    print("Iniciando grabación con ángulo de rotación: \(angle)")
                 }
-               
             }
         }
         
@@ -230,6 +241,25 @@ enum VideoManagerState {
             }
         }
             
+    }
+    
+    @MainActor
+    func currentVideoRotationAngle() -> CGFloat {
+       // return await Task { @MainActor in
+            let orientation = UIDevice.current.orientation
+            switch orientation {
+            case .portrait:
+                return 0.0
+            case .landscapeLeft:
+                return 90.0
+            case .portraitUpsideDown:
+                return 180.0
+            case .landscapeRight:
+                return 270.0
+            default:
+                return 0 // Default to portrait
+            }
+    //    }.value
     }
         
     func stopRecording() {
@@ -259,21 +289,21 @@ enum VideoManagerState {
         invalidateTimers()
     }
     
-    @MainActor
-    private func currentVideoOrientation() async -> AVCaptureVideoOrientation {
-        switch UIDevice.current.orientation {
-        case .portrait:
-            return .portrait
-        case .landscapeLeft:
-            return .landscapeRight
-        case .landscapeRight:
-            return .landscapeLeft
-        case .portraitUpsideDown:
-            return .portraitUpsideDown
-        default:
-            return .portrait
-        }
-    }
+//    @MainActor
+//    private func currentVideoOrientation() async -> AVCaptureVideoOrientation {
+//        switch UIDevice.current.orientation {
+//        case .portrait:
+//            return .portrait
+//        case .landscapeLeft:
+//            return .landscapeRight
+//        case .landscapeRight:
+//            return .landscapeLeft
+//        case .portraitUpsideDown:
+//            return .portraitUpsideDown
+//        default:
+//            return .portrait
+//        }
+//    }
     
     var timerRunning = false
     private var timer: DispatchSourceTimer?
@@ -339,7 +369,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         }
         await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: lastSecsOutputURL)
         print("Video stored at \(lastSecsOutputURL.absoluteString)")
-        startRecording()
+        await startRecording()
     }
     
     func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
@@ -359,7 +389,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         
         try await  exportSession.export(to: outputURL, as: .mov)
     }
-    
+    /*
     func trimLastSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
         let asset = AVURLAsset(url: inputURL)
         let duration = asset.duration
@@ -554,7 +584,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
       
       layer.addSublayer(textLayer)
     }
-    
+   */
 }
 
 extension VideoManager: @preconcurrency VideoManagerProtocol {
