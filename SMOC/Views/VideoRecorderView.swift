@@ -43,7 +43,7 @@ struct VideoRecorderView: View {
                     Spacer()
                     Button(action: {
                         Task {
-                            await videoManager.stopRecording()
+                            await videoManager.stopRecording(stoppedSessionDueAppBackground: false)
                         }
                     }) {
                         ZStack {
@@ -89,6 +89,8 @@ struct VideoRecorderView: View {
                 }
             @unknown default: break
             }
+        }.onRotate { newOrientation in
+            reStartRecording()
         }
     }
     
@@ -112,11 +114,39 @@ struct VideoRecorderView: View {
         }
     }
     
+    func reStartRecording() {
+        Task {
+            await videoManager.stopSession(true)
+            DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) { 
+                startRecording()
+            }
+           
+        }
+    }
+    
     func startRecording() {
         Task {
             await videoManager.setupSession()
             await videoManager.startRecording()
         }
+    }
+}
+
+struct DeviceRotationViewModifier: ViewModifier {
+    let action: (UIDeviceOrientation) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear()
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+                action(UIDevice.current.orientation)
+            }
+    }
+}
+
+extension View {
+    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
+        self.modifier(DeviceRotationViewModifier(action: action))
     }
 }
 
