@@ -76,26 +76,15 @@ extension LocationManager: CLLocationManagerDelegate {
         let statuses: [CLAuthorizationStatus] = [.authorizedWhenInUse, .authorizedAlways]
         if statuses.contains(status) {
             internalPermissionGranted = true
-            //DispatchQueue.global().asyncAfter(deadline: .now()) { [weak self] in
             Task {
                 startUpdatingLocation()
             }
-        //    startUpdatingLocation()
         } else if status == .notDetermined {
             checkPermission()
         } else {
             internalPermissionGranted = false
         }
     }
-    
-  //  @GlobalManager
-    private func startUpdatingLocation() {
-       // Task {
-            guard CLLocationManager.locationServicesEnabled() else { return }
-            locationManager.startUpdatingLocation()
-       // }
-    }
-    
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
@@ -106,10 +95,22 @@ extension LocationManager: CLLocationManagerDelegate {
         }
     }
     
+    private func startUpdatingLocation() {
+        guard CLLocationManager.locationServicesEnabled() else { return }
+        locationManager.startUpdatingLocation()
+    }
+    
     private func getSpeed(_ currentLocation: CLLocation) -> String {
-        let speedValue = max(0, currentLocation.speed)
-        let speedInCorrectUnit = isMetric() ? speedValue * 3.6 : speedValue * 2.23694
-        return String(format: "%d", speedInCorrectUnit)
+        let speedMeasurement = Measurement(value: max(0, currentLocation.speed), unit: UnitSpeed.metersPerSecond)
+        let localizedUnit: UnitSpeed = {
+                if #available(iOS 16.0, *) {
+                    return Locale.current.measurementSystem == .metric ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+                } else {
+                    return Locale.current.usesMetricSystem ? UnitSpeed.kilometersPerHour : UnitSpeed.milesPerHour
+                }
+            }()
+        let localizedSpeed = speedMeasurement.converted(to: localizedUnit)
+        return String(format: "%.0f", localizedSpeed.value )
     }
     
     private func isMetric() -> Bool {

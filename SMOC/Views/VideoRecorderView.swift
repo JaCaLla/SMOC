@@ -18,8 +18,10 @@ struct VideoRecorderView: View {
         
     var body: some View {
         ZStack {
-            CameraPreview(session: videoManager.avCaptureSession)
-                .edgesIgnoringSafeArea(.all)
+            if scenePhase == .active {
+                CameraPreview(session: videoManager.avCaptureSession)
+                    .edgesIgnoringSafeArea(.all)
+            }
             VStack {
                 Spacer()
                 VStack(spacing: 0) {
@@ -70,18 +72,25 @@ struct VideoRecorderView: View {
             }
         }.onAppear {
             startRecording()
-        }.onChange(of: scenePhase) { newPhase, _ in
+        }.onChange(of: scenePhase) { _ , newPhase in
             switch newPhase {
             case .active:
                 startRecording()
                 print("La aplicación está activa.")
             case .inactive:
+                print("La aplicación está inactivation.")
                 Task {
-                    await videoManager.stopSession(true)
+                    await videoManager.stopSession()
                 }
-            case .background: break
+            case .background:
+                print("La aplicación está en background.")
+                Task {
+                    await videoManager.stopSession()
+                }
             @unknown default: break
             }
+        }.onRotate { newOrientation in
+            reStartRecording()
         }
     }
     
@@ -95,7 +104,6 @@ struct VideoRecorderView: View {
         case .notStarted, .ready, .transferingToReel:
             return AnyView(Spacer().frame(height: progressHeight))
         case .preRecording, .postRecording:
-           // let progressValue = state == .postRecording ? min(progress.wrappedValue, 1.0) : 0.0
             return AnyView(
                 ProgressView(value: progress.wrappedValue, total: 1.0)
                     .progressViewStyle(LinearProgressViewStyle(tint: .gray))
@@ -105,11 +113,37 @@ struct VideoRecorderView: View {
         }
     }
     
+    func reStartRecording() {
+        Task {
+            await videoManager.stopSession()
+            startRecording()
+           
+        }
+    }
+    
     func startRecording() {
         Task {
             await videoManager.setupSession()
-            videoManager.startRecording()
+            await videoManager.startRecording()
         }
+    }
+}
+
+struct DeviceRotationViewModifier: ViewModifier {
+    let action: (UIDeviceOrientation) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear()
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+                action(UIDevice.current.orientation)
+            }
+    }
+}
+
+extension View {
+    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
+        self.modifier(DeviceRotationViewModifier(action: action))
     }
 }
 

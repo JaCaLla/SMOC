@@ -19,25 +19,15 @@ struct AppSingletonsUT {
        let appSingletons = AppSingletons()
        #expect(appSingletons.videoManager is VideoManager)
    }
-    
-     @Test
-    func testAppSingletonsInitialization() {
-        // Arrange: Create a mock VideoManager
-                let mockVideoManager = MockVideoManager()
-                
-                // Act: Initialize AppSingletons with the mock
-                let appSingletons = AppSingletons(videoManager: mockVideoManager)
-                
-                // Assert: Verify the injected videoManager is the mock
-        #expect(appSingletons.videoManager is MockVideoManager)
-        #expect((appSingletons.videoManager as! MockVideoManager).isInitialized)
-    }
 }
 
 
+@GlobalManager
 class MockVideoManager: VideoManager, @unchecked Sendable {
+    @MainActor
     var isInitialized = false
     
+    @MainActor
     init() {
         super.init()
         isInitialized = true

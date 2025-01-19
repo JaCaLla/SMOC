@@ -65,7 +65,7 @@ enum VideoManagerState {
     let postRecordingSecs: TimeInterval = 8.0
     let preRecordingSecs: TimeInterval = 5.0
     
-    var stoppedSessionDueAppBackground = false
+    var orientationOnStartRecording = AVCaptureVideoOrientation.portrait
     
     @MainActor
     @Published var state: VideoManagerState = .notStarted
@@ -95,7 +95,6 @@ enum VideoManagerState {
         }
     }
     
-    
     @MainActor
     @Published var permissionGranted: Bool = false
     private var internalPermissionGranted: Bool = false {
@@ -109,29 +108,7 @@ enum VideoManagerState {
     }
     
     @MainActor
-    @Published var recorderReady: Bool = false
-    
-    private var internalRecorderReady: Bool = false {
-         didSet {
-            Task { [internalRecorderReady] in
-                await MainActor.run {
-                    self.recorderReady = internalRecorderReady
-                }
-            }
-        }
-    }
-    
-    @MainActor
-    @Published var avCaptureSession: AVCaptureSession = AVCaptureSession()
-    private var internalAVCaptureSession: AVCaptureSession?  {
-         didSet {
-            Task { [internalRecorderReady] in
-                await MainActor.run {
-                    self.recorderReady = internalRecorderReady
-                }
-            }
-        }
-    }
+    let avCaptureSession: AVCaptureSession = AVCaptureSession()
     
     private var avCaptureDevice: AVCaptureDevice?
     private var videoOutput = AVCaptureMovieFileOutput()
@@ -149,7 +126,6 @@ enum VideoManagerState {
             return
         }
         
-        // Ajustar el zoom
         if await gesture.state == .changed {
             do {
                 try device.lockForConfiguration()
@@ -162,19 +138,18 @@ enum VideoManagerState {
                 print("Error al ajustar el zoom: \(error)")
             }
             Task { @MainActor in
-                gesture.scale = 1.0 // Reiniciar el escalado del gesto
+                gesture.scale = 1.0
             }
         }
     }
     
-    
     func setupSession() async {
-
-        internalAVCaptureSession = await Task { @MainActor in
+        print(">>> setupSession")
+        let internalAVCaptureSession = await Task { @MainActor in
             return avCaptureSession
         }.value
 
-        internalAVCaptureSession?.beginConfiguration()
+        internalAVCaptureSession.beginConfiguration()
         
         guard let avCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: avCaptureDevice) else {
@@ -183,75 +158,89 @@ enum VideoManagerState {
         }
         self.avCaptureDevice = avCaptureDevice
         
-        if internalAVCaptureSession?.canAddInput(input) ?? false {
-            internalAVCaptureSession?.addInput(input)
+        if internalAVCaptureSession.canAddInput(input) {
+            internalAVCaptureSession.addInput(input)
         }
         
-        if internalAVCaptureSession?.canAddOutput(videoOutput) ?? false {
-            internalAVCaptureSession?.addOutput(videoOutput)
+        if internalAVCaptureSession.canAddOutput(videoOutput) {
+            internalAVCaptureSession.addOutput(videoOutput)
         }
         
-        internalAVCaptureSession?.commitConfiguration()
-        internalAVCaptureSession?.startRunning()
+        internalAVCaptureSession.commitConfiguration()
+        internalAVCaptureSession.startRunning()
     }
     
     private func getAnyFileURL() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
     }
     
-    func startRecording() {
+    func startRecording() async {
+        print(">>> startRecording")
         internalState = .preRecording
         startTimer(duration: preRecordingSecs)
         guard !videoOutput.isRecording else { return }
         
-        stoppedSessionDueAppBackground = false
-        
         let outputFile = getAnyFileURL()
         outputURL = outputFile
         
+        
         if let connection = videoOutput.connection(with: .video) {
             if connection.isVideoOrientationSupported {
+                connection.videoOrientation = await currentVideoOrientation()
+                    print("Iniciando grabación en \(connection.videoOrientation)")
+            }
+        } else {
+            print("no se encontró conexión para el video")
+        }
+        
+        
+        if let connection = videoOutput.connection(with: .video) {
+            let angle: CGFloat = await currentVideoRotationAngle()
+            if connection.isVideoRotationAngleSupported(angle) {
                 Task {
-                    connection.videoOrientation = await currentVideoOrientation()
+                    let angle = await currentVideoRotationAngle()
+                    connection.videoRotationAngle = angle
+                    print("Iniciando grabación con ángulo de rotación: \(angle)")
                 }
-               
             }
         }
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
-        
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
-            Task { @GlobalManager in
-                self?.internalState = .ready
-                self?.internalRecorderReady = true
+    }
+    
+    @MainActor
+    func currentVideoRotationAngle() -> CGFloat {
+            let orientation = UIDevice.current.orientation
+            switch orientation {
+            case .portrait:
+                return 0.0
+            case .landscapeLeft:
+                return 90.0
+            case .portraitUpsideDown:
+                return 180.0
+            case .landscapeRight:
+                return 270.0
+            default:
+                return 0
             }
-        }
-            
     }
         
     func stopRecording() {
+        print(">>> stopRecording")
         internalState = .postRecording
         startTimer(duration: postRecordingSecs)
         guard videoOutput.isRecording else { return }
-        
-        internalRecorderReady = false
         print("Recording will stop in \(postRecordingSecs) seconds")
-       // Task { @GlobalManager in
-            //DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + postRecordingSecs) { [videoOutput] in
-                videoOutput.stopRecording()
-                print("Recording Stopped.")
-            }
-       // }
-
     }
     
-    func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
+    func stopSession() async {
+        print(">>> stopSession ")
+        let internalAVCaptureSession = await Task { @MainActor in
+            return avCaptureSession
+        }.value
         internalState = .notStarted
-        internalAVCaptureSession?.stopRunning()
-        internalRecorderReady = false
-        self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
+        internalAVCaptureSession.stopRunning()
         invalidateTimers()
     }
     
@@ -292,24 +281,21 @@ enum VideoManagerState {
                                     self.internalProgress += step//min(self?.internalProgress ?? 0.0 + step, 1.0)
                                     self.internalProgress = min(self.internalProgress  , 1.0)
                                 } else {
+                                    
+                                    if self.internalState == .preRecording {
+                                                        self.internalState = .ready
+                                                       // self?.internalRecorderReady = true
+                                    } else if self.internalState == .postRecording {
+                                        self.videoOutput.stopRecording()
+                                            print("Recording Stopped.")
+                                    
+                                    }
+                                    
                                     self.invalidateTimers()
                                 }
-             //   print("internalProgress:\(String(describing: self?.internalProgress))")
             }
         }
-
-        timer?.resume() // Iniciar el temporizador
-        
-//        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-//           // Task { @GlobalManager in
-//                if self?.internalProgress ?? 0.0 < 1.0 {
-//                    self?.internalProgress = min(self?.internalProgress ?? 0.0 + step, 1.0)
-//                } else {
-//                    self?.invalidateTimers()
-//                }
-//                print("internalProgress:\(self?.internalProgress)")
-//     //       }
-//        }
+        timer?.resume()
     }
     
     private func invalidateTimers() {
@@ -320,15 +306,35 @@ enum VideoManagerState {
 }
 
 extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
-    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: (any Error)?) {
+        guard internalState == .postRecording else {
+            return
+        }
         if let error = error {
             print("Error during recording: \(error.localizedDescription)")
-            //stopSession(true)
             return
         }
-        guard !stoppedSessionDueAppBackground else {
+        
+        Task { @GlobalManager in
+            internalState = .transferingToReel
+            await moveToReelLastSecs(outputURL: outputURL)
+        }
+    }
+    
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) async {
+        guard internalState == .postRecording else {
             return
         }
+        if let error = error {
+            print("Error during recording: \(error.localizedDescription)")
+            return
+        }
+        
+        let curr = await currentVideoOrientation()
+        guard orientationOnStartRecording == curr  else {
+            return
+        }
+        
         Task { @GlobalManager in
             internalState = .transferingToReel
             await moveToReelLastSecs(outputURL: outputURL)
@@ -346,13 +352,13 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         }
         await appSingletons.reelManager.saveVideoToPhotoLibrary(fileURL: lastSecsOutputURL)
         print("Video stored at \(lastSecsOutputURL.absoluteString)")
-        startRecording()
+        await startRecording()
     }
     
     func trimLastThirteenSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
         
-        let asset = AVAsset(url: inputURL)
-        let duration = asset.duration
+        let asset = AVURLAsset(url: inputURL)
+        let duration = try await asset.load(.duration)
         let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
         
@@ -364,27 +370,8 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         exportSession.outputFileType = .mov
         exportSession.timeRange = timeRange
         
-        // Await the export process
-        try await withCheckedThrowingContinuation { continuation in
-            exportSession.exportAsynchronously {
-                switch exportSession.status {
-                case .completed:
-                    continuation.resume()
-                case .failed:
-                    if let error = exportSession.error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(throwing: NSError(domain: "ExportSession", code: 2, userInfo: nil))
-                    }
-                case .cancelled:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 1, userInfo: nil))
-                default:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 3, userInfo: nil))
-                }
-            }
-        }
+        try await  exportSession.export(to: outputURL, as: .mov)
     }
-    
 }
 
 extension VideoManager: @preconcurrency VideoManagerProtocol {
