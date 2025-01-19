@@ -65,7 +65,6 @@ enum VideoManagerState {
     let postRecordingSecs: TimeInterval = 8.0
     let preRecordingSecs: TimeInterval = 5.0
     
-   // var stoppedSessionDueAppBackground = false
     var orientationOnStartRecording = AVCaptureVideoOrientation.portrait
     
     @MainActor
@@ -108,31 +107,8 @@ enum VideoManagerState {
         }
     }
     
-    
     @MainActor
-    @Published var recorderReady: Bool = false
-    
-    private var internalRecorderReady: Bool = false {
-         didSet {
-            Task { [internalRecorderReady] in
-                await MainActor.run {
-                    self.recorderReady = internalRecorderReady
-                }
-            }
-        }
-    }
-    
-    @MainActor
-    @Published var avCaptureSession: AVCaptureSession = AVCaptureSession()
-    private var internalAVCaptureSession: AVCaptureSession?  {
-         didSet {
-            Task { [internalRecorderReady] in
-                await MainActor.run {
-                    self.recorderReady = internalRecorderReady
-                }
-            }
-        }
-    }
+    let avCaptureSession: AVCaptureSession = AVCaptureSession()
     
     private var avCaptureDevice: AVCaptureDevice?
     private var videoOutput = AVCaptureMovieFileOutput()
@@ -150,7 +126,6 @@ enum VideoManagerState {
             return
         }
         
-        // Ajustar el zoom
         if await gesture.state == .changed {
             do {
                 try device.lockForConfiguration()
@@ -163,19 +138,18 @@ enum VideoManagerState {
                 print("Error al ajustar el zoom: \(error)")
             }
             Task { @MainActor in
-                gesture.scale = 1.0 // Reiniciar el escalado del gesto
+                gesture.scale = 1.0
             }
         }
     }
     
-    
     func setupSession() async {
         print(">>> setupSession")
-        internalAVCaptureSession = await Task { @MainActor in
+        let internalAVCaptureSession = await Task { @MainActor in
             return avCaptureSession
         }.value
 
-        internalAVCaptureSession?.beginConfiguration()
+        internalAVCaptureSession.beginConfiguration()
         
         guard let avCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: avCaptureDevice) else {
@@ -184,16 +158,16 @@ enum VideoManagerState {
         }
         self.avCaptureDevice = avCaptureDevice
         
-        if internalAVCaptureSession?.canAddInput(input) ?? false {
-            internalAVCaptureSession?.addInput(input)
+        if internalAVCaptureSession.canAddInput(input) {
+            internalAVCaptureSession.addInput(input)
         }
         
-        if internalAVCaptureSession?.canAddOutput(videoOutput) ?? false {
-            internalAVCaptureSession?.addOutput(videoOutput)
+        if internalAVCaptureSession.canAddOutput(videoOutput) {
+            internalAVCaptureSession.addOutput(videoOutput)
         }
         
-        internalAVCaptureSession?.commitConfiguration()
-        internalAVCaptureSession?.startRunning()
+        internalAVCaptureSession.commitConfiguration()
+        internalAVCaptureSession.startRunning()
     }
     
     private func getAnyFileURL() -> URL {
@@ -206,20 +180,14 @@ enum VideoManagerState {
         startTimer(duration: preRecordingSecs)
         guard !videoOutput.isRecording else { return }
         
-       // stoppedSessionDueAppBackground = false
-        
         let outputFile = getAnyFileURL()
         outputURL = outputFile
         
         
         if let connection = videoOutput.connection(with: .video) {
             if connection.isVideoOrientationSupported {
-            //    Task {
-               
                 connection.videoOrientation = await currentVideoOrientation()
                     print("Iniciando grabación en \(connection.videoOrientation)")
-              //  }
-                
             }
         } else {
             print("no se encontró conexión para el video")
@@ -239,19 +207,10 @@ enum VideoManagerState {
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
         print("Iniciando grabación en \(outputFile.absoluteString)")
-        
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + preRecordingSecs) { [weak self] in
-            Task { @GlobalManager in
-                self?.internalState = .ready
-                self?.internalRecorderReady = true
-            }
-        }
-            
     }
     
     @MainActor
     func currentVideoRotationAngle() -> CGFloat {
-       // return await Task { @MainActor in
             let orientation = UIDevice.current.orientation
             switch orientation {
             case .portrait:
@@ -263,39 +222,25 @@ enum VideoManagerState {
             case .landscapeRight:
                 return 270.0
             default:
-                return 0 // Default to portrait
+                return 0
             }
-    //    }.value
     }
         
-    func stopRecording(stoppedSessionDueAppBackground: Bool) {
+    func stopRecording() {
         print(">>> stopRecording")
-        if stoppedSessionDueAppBackground {
-            print("todo")
-        }
         internalState = .postRecording
         startTimer(duration: postRecordingSecs)
         guard videoOutput.isRecording else { return }
-        
-        
-        internalRecorderReady = false
         print("Recording will stop in \(postRecordingSecs) seconds")
-       // Task { @GlobalManager in
-            //DispatchQueue.main.asyncAfter(deadline: .now() + postRecordingSecs) { [weak self] in
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + postRecordingSecs) { [videoOutput] in
-                videoOutput.stopRecording()
-                print("Recording Stopped.")
-            }
-       // }
-
     }
     
-    func stopSession(_ stoppedSessionDueAppBackground: Bool = false) {
-        print(">>> stopSession stoppedSessionDueAppBackground:\(stoppedSessionDueAppBackground)")
+    func stopSession() async {
+        print(">>> stopSession ")
+        let internalAVCaptureSession = await Task { @MainActor in
+            return avCaptureSession
+        }.value
         internalState = .notStarted
-        internalAVCaptureSession?.stopRunning()
-        internalRecorderReady = false
-        //self.stoppedSessionDueAppBackground = stoppedSessionDueAppBackground
+        internalAVCaptureSession.stopRunning()
         invalidateTimers()
     }
     
@@ -336,13 +281,21 @@ enum VideoManagerState {
                                     self.internalProgress += step//min(self?.internalProgress ?? 0.0 + step, 1.0)
                                     self.internalProgress = min(self.internalProgress  , 1.0)
                                 } else {
+                                    
+                                    if self.internalState == .preRecording {
+                                                        self.internalState = .ready
+                                                       // self?.internalRecorderReady = true
+                                    } else if self.internalState == .postRecording {
+                                        self.videoOutput.stopRecording()
+                                            print("Recording Stopped.")
+                                    
+                                    }
+                                    
                                     self.invalidateTimers()
                                 }
             }
         }
-
-        timer?.resume() // Iniciar el temporizador
-        
+        timer?.resume()
     }
     
     private func invalidateTimers() {
@@ -359,17 +312,8 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         }
         if let error = error {
             print("Error during recording: \(error.localizedDescription)")
-            //stopSession(true)
             return
         }
-//        guard !stoppedSessionDueAppBackground else {
-//            return
-//        }
-//        
-//        let curr = await currentVideoOrientation()
-//        guard orientationOnStartRecording == curr  else {
-//            return
-//        }
         
         Task { @GlobalManager in
             internalState = .transferingToReel
@@ -377,44 +321,14 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         }
     }
     
-//    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: (any Error)?) {
-//        Task {
-//            guard state == .postRecording else {
-//                return
-//            }
-//            if let error = error {
-//                print("Error during recording: \(error.localizedDescription)")
-//                //stopSession(true)
-//                return
-//            }
-//            guard !stoppedSessionDueAppBackground else {
-//                return
-//            }
-//            
-//            let curr = await currentVideoOrientation()
-//            guard orientationOnStartRecording == curr  else {
-//                return
-//            }
-//            
-//            Task { @GlobalManager in
-//                internalState = .transferingToReel
-//                await moveToReelLastSecs(outputURL: outputURL)
-//            }
-//        }
-//    }
-    
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) async {
         guard internalState == .postRecording else {
             return
         }
         if let error = error {
             print("Error during recording: \(error.localizedDescription)")
-            //stopSession(true)
             return
         }
-//        guard !stoppedSessionDueAppBackground else {
-//            return
-//        }
         
         let curr = await currentVideoOrientation()
         guard orientationOnStartRecording == curr  else {
@@ -455,229 +369,9 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         exportSession.outputURL = outputURL
         exportSession.outputFileType = .mov
         exportSession.timeRange = timeRange
-        /*
-        let orientation = await Task { @MainActor in UIDevice.current.orientation }.value
-        if orientation == .landscapeLeft {
-            let composition = AVMutableComposition()
-            guard let compositionTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-                throw NSError(domain: "Composition", code: 1, userInfo: nil)
-            }
-            
-            let assetTrack = try await asset.loadTracks(withMediaType: .video).first!
-            try compositionTrack.insertTimeRange(timeRange, of: assetTrack, at: .zero)
-            
-            let videoComposition = AVMutableVideoComposition(propertiesOf: asset)
-            let instruction = AVMutableVideoCompositionInstruction()
-            instruction.timeRange = CMTimeRange(start: .zero, duration: timeRange.duration)
-            
-            let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionTrack)
-            let transform = CGAffineTransform(rotationAngle: .pi / 2)
-            layerInstruction.setTransform(transform, at: .zero)
-            
-            instruction.layerInstructions = [layerInstruction]
-            videoComposition.instructions = [instruction]
-            
-            exportSession.videoComposition = videoComposition
-        }*/
         
         try await  exportSession.export(to: outputURL, as: .mov)
     }
-    /*
-    func trimLastSeconds(last lastRecordingSecs: TimeInterval, from inputURL: URL, to outputURL: URL) async throws {
-        let asset = AVURLAsset(url: inputURL)
-        let duration = asset.duration
-        let startTime = CMTimeSubtract(duration, CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
-        let timeRange = CMTimeRange(start: startTime, duration: CMTime(seconds: lastRecordingSecs, preferredTimescale: 600))
-        
-        let composition = AVMutableComposition()
-        
-        guard
-          let compositionTrack = composition.addMutableTrack(
-            withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-          let assetTrack = asset.tracks(withMediaType: .video).first
-          else {
-            print("Something is wrong with the asset.")
-            return
-        }
-        
-        do {
-          //let timeRange = CMTimeRange(start: .zero, duration: asset.duration)
-          try compositionTrack.insertTimeRange(timeRange, of: assetTrack, at: .zero)
-          
-          if let audioAssetTrack = asset.tracks(withMediaType: .audio).first,
-            let compositionAudioTrack = composition.addMutableTrack(
-              withMediaType: .audio,
-              preferredTrackID: kCMPersistentTrackID_Invalid) {
-            try compositionAudioTrack.insertTimeRange(
-              timeRange,
-              of: audioAssetTrack,
-              at: .zero)
-          }
-        } catch {
-          print(error)
-       //   onComplete(nil)
-          return
-        }
-        
-        compositionTrack.preferredTransform = assetTrack.preferredTransform
-        let videoInfo = orientation(from: assetTrack.preferredTransform)
-        
-        let videoSize: CGSize
-        if videoInfo.isPortrait {
-          videoSize = CGSize(
-            width: assetTrack.naturalSize.height,
-            height: assetTrack.naturalSize.width)
-        } else {
-          videoSize = assetTrack.naturalSize
-        }
-        
-       // let backgroundLayer = CALayer()
-       // backgroundLayer.frame = CGRect(origin: .zero, size: videoSize)
-        let videoLayer = CALayer()
-        videoLayer.frame = CGRect(origin: .zero, size: videoSize)
-        let overlayLayer = CALayer()
-        overlayLayer.frame = CGRect(origin: .zero, size: videoSize)
-        
-        add(
-          text: "Happy Birthday,\n",
-          to: overlayLayer,
-          videoSize: videoSize)
-        
-        let outputLayer = CALayer()
-        outputLayer.frame = CGRect(origin: .zero, size: videoSize)
-      //  outputLayer.addSublayer(backgroundLayer)
-        outputLayer.addSublayer(videoLayer)
-        outputLayer.addSublayer(overlayLayer)
-        
-        let videoComposition = AVMutableVideoComposition()
-        videoComposition.renderSize = videoSize
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
-        videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(
-          postProcessingAsVideoLayer: videoLayer,
-          in: outputLayer)
-        
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRange(
-          start: .zero,
-          duration: composition.duration)
-        videoComposition.instructions = [instruction]
-        let layerInstruction = compositionLayerInstruction(
-          for: compositionTrack,
-          assetTrack: assetTrack)
-        instruction.layerInstructions = [layerInstruction]
-        
-//        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
-//            throw NSError(domain: "ExportSession", code: 0, userInfo: nil)
-//        }
-//        
-//        exportSession.outputURL = outputURL
-//        exportSession.outputFileType = .mov
-//        exportSession.timeRange = timeRange
-        
-//        let videoName = UUID().uuidString
-//        let exportURL = URL(fileURLWithPath: NSTemporaryDirectory())
-//          .appendingPathComponent(videoName)
-//          .appendingPathExtension("mov")
-        
-        guard let exportSession = AVAssetExportSession(
-          asset: composition,
-          presetName: AVAssetExportPresetHighestQuality)
-          else {
-            print("Cannot create export session.")
-         //   onComplete(nil)
-            return
-        }
-        
-        exportSession.videoComposition = videoComposition
-        exportSession.outputFileType = .mov
-        exportSession.outputURL = outputURL
-        
-        // Await the export process
-        try await withCheckedThrowingContinuation { continuation in
-            exportSession.exportAsynchronously {
-                switch exportSession.status {
-                case .completed:
-                    continuation.resume()
-                case .failed:
-                    if let error = exportSession.error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(throwing: NSError(domain: "ExportSession", code: 2, userInfo: nil))
-                    }
-                case .cancelled:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 1, userInfo: nil))
-                default:
-                    continuation.resume(throwing: NSError(domain: "ExportSession", code: 3, userInfo: nil))
-                }
-            }
-        }
-    }
-    
-    private func orientation(from transform: CGAffineTransform) -> (orientation: UIImage.Orientation, isPortrait: Bool) {
-      var assetOrientation = UIImage.Orientation.up
-      var isPortrait = false
-      if transform.a == 0 && transform.b == 1.0 && transform.c == -1.0 && transform.d == 0 {
-        assetOrientation = .right
-        isPortrait = true
-      } else if transform.a == 0 && transform.b == -1.0 && transform.c == 1.0 && transform.d == 0 {
-        assetOrientation = .left
-        isPortrait = true
-      } else if transform.a == 1.0 && transform.b == 0 && transform.c == 0 && transform.d == 1.0 {
-        assetOrientation = .up
-      } else if transform.a == -1.0 && transform.b == 0 && transform.c == 0 && transform.d == -1.0 {
-        assetOrientation = .down
-      }
-      
-      return (assetOrientation, isPortrait)
-    }
-    
-    private func compositionLayerInstruction(for track: AVCompositionTrack, assetTrack: AVAssetTrack) -> AVMutableVideoCompositionLayerInstruction {
-      let instruction = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
-      let transform = assetTrack.preferredTransform
-      
-      instruction.setTransform(transform, at: .zero)
-      
-      return instruction
-    }
-    
-    private func add(text: String, to layer: CALayer, videoSize: CGSize) {
-      let attributedText = NSAttributedString(
-        string: text,
-        attributes: [
-          .font: UIFont(name: "ArialRoundedMTBold", size: 60) as Any,
-          .foregroundColor: UIColor.electricYellow,
-          .strokeColor: UIColor.white,
-          .strokeWidth: -3])
-      
-      let textLayer = CATextLayer()
-      textLayer.string = attributedText
-      textLayer.shouldRasterize = true
-      textLayer.rasterizationScale = UIScreen.main.scale
-      textLayer.backgroundColor = UIColor.clear.cgColor
-      textLayer.alignmentMode = .center
-      
-      textLayer.frame = CGRect(
-        x: 0,
-        y: videoSize.height * 0.66,
-        width: videoSize.width,
-        height: 150)
-      textLayer.displayIfNeeded()
-      
-      let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
-      scaleAnimation.fromValue = 0.8
-      scaleAnimation.toValue = 1.2
-      scaleAnimation.duration = 0.5
-      scaleAnimation.repeatCount = .greatestFiniteMagnitude
-      scaleAnimation.autoreverses = true
-      scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-      
-      scaleAnimation.beginTime = AVCoreAnimationBeginTimeAtZero
-      scaleAnimation.isRemovedOnCompletion = false
-      textLayer.add(scaleAnimation, forKey: "scale")
-      
-      layer.addSublayer(textLayer)
-    }
-   */
 }
 
 extension VideoManager: @preconcurrency VideoManagerProtocol {

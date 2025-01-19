@@ -43,7 +43,7 @@ struct VideoRecorderView: View {
                     Spacer()
                     Button(action: {
                         Task {
-                            await videoManager.stopRecording(stoppedSessionDueAppBackground: false)
+                            await videoManager.stopRecording()
                         }
                     }) {
                         ZStack {
@@ -80,12 +80,12 @@ struct VideoRecorderView: View {
             case .inactive:
                 print("La aplicación está inactivation.")
                 Task {
-                    await videoManager.stopSession(true)
+                    await videoManager.stopSession()
                 }
             case .background:
                 print("La aplicación está en background.")
                 Task {
-                    await videoManager.stopSession(true)
+                    await videoManager.stopSession()
                 }
             @unknown default: break
             }
@@ -104,7 +104,6 @@ struct VideoRecorderView: View {
         case .notStarted, .ready, .transferingToReel:
             return AnyView(Spacer().frame(height: progressHeight))
         case .preRecording, .postRecording:
-           // let progressValue = state == .postRecording ? min(progress.wrappedValue, 1.0) : 0.0
             return AnyView(
                 ProgressView(value: progress.wrappedValue, total: 1.0)
                     .progressViewStyle(LinearProgressViewStyle(tint: .gray))
@@ -116,10 +115,8 @@ struct VideoRecorderView: View {
     
     func reStartRecording() {
         Task {
-            await videoManager.stopSession(true)
-            DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) { 
-                startRecording()
-            }
+            await videoManager.stopSession()
+            startRecording()
            
         }
     }
