@@ -206,6 +206,19 @@ enum VideoManagerState {
         }
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
+        
+        let reestartSecs = 3.0 * 60.0
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + reestartSecs) { [weak self] in
+            Task { @GlobalManager in
+                guard let self, self.internalState == .ready else {
+                    return
+                }
+                await self.stopSession()
+                await self.setupSession()
+                await self.startRecording()
+            }
+        }
+        
         print("Iniciando grabación en \(outputFile.absoluteString)")
     }
     
@@ -259,7 +272,7 @@ enum VideoManagerState {
             return .portrait
         }
     }
-    
+        
     var timerRunning = false
     private var timer: DispatchSourceTimer?
     
@@ -338,6 +351,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         Task { @GlobalManager in
             internalState = .transferingToReel
             await moveToReelLastSecs(outputURL: outputURL)
+            await appSingletons.fileStoreManager.clearTemporaryDirectory()
         }
     }
     
