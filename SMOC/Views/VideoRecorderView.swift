@@ -181,6 +181,12 @@ struct CameraPreview: UIViewRepresentable {
             name: UIDevice.orientationDidChangeNotification,
             object: nil
         )
+        
+        if [.landscapeLeft, .landscapeRight].contains( where: { UIDevice.current.videoOrientation == $0}) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                context.coordinator.updateVideoOrientation()
+            }
+        }
 
         return videoPreviewView
     }
@@ -202,7 +208,9 @@ struct CameraPreview: UIViewRepresentable {
                 let previewLayer = previewLayer,
                 let connection = previewLayer.connection,
                 connection.isVideoOrientationSupported
-            else { return }
+            else {
+                return
+            }
             
             let orientation = UIDevice.current.videoOrientation
             connection.videoOrientation = orientation
