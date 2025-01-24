@@ -60,10 +60,10 @@ enum VideoManagerState {
 }
 
 @GlobalManager
-/*final*/ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
+class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
-    let postRecordingSecs: TimeInterval = 8.0
-    let preRecordingSecs: TimeInterval = 5.0
+    private let postRecordingSecs: TimeInterval = 8.0
+    private let preRecordingSecs: TimeInterval = 5.0
     
     var orientationOnStartRecording = AVCaptureVideoOrientation.portrait
     
@@ -145,6 +145,10 @@ enum VideoManagerState {
     
     func setupSession() async {
         print(">>> setupSession")
+        guard internalState == .notStarted else { return }
+        
+        await appSingletons.fileStoreManager.clearTemporaryDirectory()
+        
         let internalAVCaptureSession = await Task { @MainActor in
             return avCaptureSession
         }.value
@@ -176,6 +180,7 @@ enum VideoManagerState {
     
     func startRecording() async {
         print(">>> startRecording")
+        guard [.notStarted, .transferingToReel].contains(where: { $0 == internalState}) else { return }
         internalState = .preRecording
         startTimer(duration: preRecordingSecs)
         guard !videoOutput.isRecording else { return }
@@ -206,8 +211,24 @@ enum VideoManagerState {
         }
         
         videoOutput.startRecording(to: outputFile, recordingDelegate: self)
+        
+        if deadline == nil {
+            deadline = 5.0 * 60.0
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + (deadline ?? 0.0)) { [weak self] in
+                Task { @GlobalManager in
+                    guard let self, self.internalState == .ready else {
+                        return
+                    }
+                    await self.stopSession()
+                    await self.setupSession()
+                    self.deadline = nil
+                    await self.startRecording()
+                }
+            }
+        }
         print("Iniciando grabación en \(outputFile.absoluteString)")
     }
+    var deadline: Double?
     
     @MainActor
     func currentVideoRotationAngle() -> CGFloat {
@@ -236,6 +257,7 @@ enum VideoManagerState {
     
     func stopSession() async {
         print(">>> stopSession ")
+        guard internalState != .notStarted else { return }
         let internalAVCaptureSession = await Task { @MainActor in
             return avCaptureSession
         }.value
@@ -259,7 +281,7 @@ enum VideoManagerState {
             return .portrait
         }
     }
-    
+        
     var timerRunning = false
     private var timer: DispatchSourceTimer?
     
@@ -338,6 +360,7 @@ extension VideoManager: @preconcurrency AVCaptureFileOutputRecordingDelegate {
         Task { @GlobalManager in
             internalState = .transferingToReel
             await moveToReelLastSecs(outputURL: outputURL)
+            await appSingletons.fileStoreManager.clearTemporaryDirectory()
         }
     }
     

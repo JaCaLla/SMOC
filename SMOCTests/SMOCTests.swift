@@ -17,7 +17,7 @@ struct SMOCTests {
             fatalError("testAppVersionAndBuild failed on fetching keys from dictionary")
         }
         #expect(appVersion == "0.0.1")
-        #expect(appBuild == "1")
+        #expect(appBuild == "8")
     }
 
 }
