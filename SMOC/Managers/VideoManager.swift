@@ -7,6 +7,7 @@
 import AVFoundation
 import Foundation
 import UIKit
+import SwiftUI
 
 protocol AVCaptureDeviceProtocol {
     static func authorizationStatus(for mediaType: AVMediaType) -> AVAuthorizationStatus
@@ -62,8 +63,10 @@ enum VideoManagerState {
 @GlobalManager
 class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
-    private let postRecordingSecs: TimeInterval = 8.0
-    private let preRecordingSecs: TimeInterval = 5.0
+    //private let postRecordingSecs: TimeInterval = 8.0
+    //private let preRecordingSecs: TimeInterval = 5.0
+    @AppStorage(AppStorageVar.preRecordingSecs.rawValue) private var preRecordingSecs = AppStorageDefaultValues.preRecordingSecs
+    @AppStorage(AppStorageVar.postRecordingSecs.rawValue) private var postRecordingSecs = AppStorageDefaultValues.postRecordingSecs
     
     var orientationOnStartRecording = AVCaptureVideoOrientation.portrait
     
@@ -141,6 +144,16 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
                 gesture.scale = 1.0
             }
         }
+    }
+    
+    func setupSessionAndStartRecording() async {
+        await setupSession()
+        await startRecording()
+    }
+    
+    func reStartRecording() async {
+        await stopSession()
+        await setupSessionAndStartRecording()
     }
     
     func setupSession() async {

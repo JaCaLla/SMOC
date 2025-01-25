@@ -15,7 +15,7 @@ class LocationManager: NSObject, ObservableObject  {
     @Published var permissionGranted: Bool = false
     private var internalPermissionGranted: Bool = false {
          didSet {
-            Task { [internalPermissionGranted] in
+             Task { [internalPermissionGranted] in
                 await MainActor.run {
                     self.permissionGranted = internalPermissionGranted
                 }
