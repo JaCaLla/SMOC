@@ -8,6 +8,7 @@
 import Foundation
 import Photos
 
+@MainActor
 protocol ReelManagerProtocol {
     var permissionGranted: Bool { get }
     func checkPermission() async
@@ -15,6 +16,7 @@ protocol ReelManagerProtocol {
     func saveVideoToPhotoLibrary(fileURL: URL) async
 }
 
+@MainActor
 final class ReelManager: ObservableObject {
     
     @Published var permissionGranted: Bool = false

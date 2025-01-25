@@ -15,11 +15,11 @@ struct AppSingletons {
     var locationManager: LocationManager
     
     init(videoManager: VideoManager? = nil,
-         reelManager: ReelManager = ReelManager(),
+         reelManager: ReelManager? = nil,
          fileStoreManager: FileStoreManager? = nil,
          locationManager: LocationManager? = nil) {
         self.videoManager = VideoManager()
-        self.reelManager = reelManager
+        self.reelManager = reelManager ?? ReelManager()
         self.fileStoreManager = fileStoreManager ?? FileStoreManager()
         self.locationManager = locationManager ?? LocationManager()
 

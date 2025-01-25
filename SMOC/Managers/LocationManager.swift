@@ -8,6 +8,7 @@
 import Foundation
 import CoreLocation
 
+@MainActor
 class LocationManager: NSObject, ObservableObject  {
     private var locationManager = CLLocationManager()
 
@@ -70,9 +71,9 @@ class LocationManager: NSObject, ObservableObject  {
     }
 }
 
-extension LocationManager: CLLocationManagerDelegate {
+extension LocationManager: @preconcurrency CLLocationManagerDelegate {
     
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         let statuses: [CLAuthorizationStatus] = [.authorizedWhenInUse, .authorizedAlways]
         if statuses.contains(status) {
             internalPermissionGranted = true
