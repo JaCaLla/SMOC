@@ -11,6 +11,7 @@ import AVFoundation
 struct VideoRecorderView: View {
     @StateObject var videoManager = appSingletons.videoManager
     @StateObject var locationManager = appSingletons.locationManager
+    @StateObject var motionManager = appSingletons.motionManager
     @Environment(\.scenePhase) var scenePhase
     @State private var isShowingDetail = false
     let lowOpacity = 0.6
@@ -85,13 +86,39 @@ struct VideoRecorderView: View {
             let currentSpeedUnits = locationManager.currentSpeedUnits else {
             return AnyView(EmptyView())
         }
-        return AnyView(HStack(alignment: .lastTextBaseline) {
-                Text(currentSpeed)
-                    .font(.currentSpeedFont)
-                Text(currentSpeedUnits)
-                    .font(.currentSpeedUnitsFont)
+        return AnyView(
+            VStack {
+                HStack(alignment: .lastTextBaseline) {
+                    Text(currentSpeed)
+                        .font(.currentSpeedFont)
+                    Text(currentSpeedUnits)
+                        .font(.currentSpeedUnitsFont)
 
-            })
+                }
+                HStack {
+                    Text(getRotationRate())
+                        .font(.currentSpeedUnitsFont)
+                    if motionManager.motionAlarm {
+                        Image(systemName: "car.rear.and.tire.marks")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 50, height: 50)
+                            .foregroundColor( .white)
+                    }
+                }
+            }.onChange(of: motionManager.motionAlarm) { oldValue, newValue in
+                guard !oldValue, newValue else { return }
+            //    stopRecording()
+                
+            }
+        )
+    }
+    
+    func getRotationRate() -> String {
+      //  let max = max(motionManager.rotationRate.x , max( motionManager.rotationRate.y , motionManager.rotationRate.z ))
+       return String(format: "%.2f", motionManager.rotationRate )
+        
+     //   "\(motionManager.rotationRate.x, specifier: "%.2f")"
     }
 
     func progressView() -> some View {
@@ -127,12 +154,15 @@ struct VideoRecorderView: View {
         }
     }
 
+    private func stopRecording() {
+        Task {
+            await videoManager.stopRecording()
+        }
+    }
 
     func recorderButton() -> some View {
         Button(action: {
-            Task {
-                await videoManager.stopRecording()
-            }
+            stopRecording()
         }) {
             ZStack {
                 Circle()

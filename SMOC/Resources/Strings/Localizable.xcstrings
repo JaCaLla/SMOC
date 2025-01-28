@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld" : {
+
+    },
     "alert_btn_settings" : {
       "localizations" : {
         "en" : {
@@ -46,6 +49,22 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Preparando app…"
+          }
+        }
+      }
+    },
+    "motion_threshold_trigger_record" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion threhold %.0f triggers video clip recording"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una inercia de %.0f dispara la grabación de clips de video"
           }
         }
       }

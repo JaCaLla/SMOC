@@ -22,6 +22,8 @@ protocol VideoManagerProtocol {
     func requestPermission() async -> Bool
 }
 
+extension AVCaptureSession: @unchecked Sendable {}
+
 enum VideoManagerState {
     case notStarted
     case preRecording
@@ -63,8 +65,6 @@ enum VideoManagerState {
 @GlobalManager
 class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
-    //private let postRecordingSecs: TimeInterval = 8.0
-    //private let preRecordingSecs: TimeInterval = 5.0
     @AppStorage(AppStorageVar.preRecordingSecs.rawValue) private var preRecordingSecs = AppStorageDefaultValues.preRecordingSecs
     @AppStorage(AppStorageVar.postRecordingSecs.rawValue) private var postRecordingSecs = AppStorageDefaultValues.postRecordingSecs
     
@@ -162,9 +162,7 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
         
         await appSingletons.fileStoreManager.clearTemporaryDirectory()
         
-        let internalAVCaptureSession = await Task { @MainActor in
-            return avCaptureSession
-        }.value
+        let internalAVCaptureSession = await getAVCaptureSession()
 
         internalAVCaptureSession.beginConfiguration()
         
@@ -185,6 +183,12 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
         
         internalAVCaptureSession.commitConfiguration()
         internalAVCaptureSession.startRunning()
+    }
+    
+    private func getAVCaptureSession() async -> AVCaptureSession {
+        await MainActor.run {
+            return avCaptureSession
+        }
     }
     
     private func getAnyFileURL() -> URL {
@@ -271,9 +275,7 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     func stopSession() async {
         print(">>> stopSession ")
         guard internalState != .notStarted else { return }
-        let internalAVCaptureSession = await Task { @MainActor in
-            return avCaptureSession
-        }.value
+        let internalAVCaptureSession = await getAVCaptureSession()
         internalState = .notStarted
         internalAVCaptureSession.stopRunning()
         invalidateTimers()
@@ -298,6 +300,7 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     var timerRunning = false
     private var timer: DispatchSourceTimer?
     
+    // Look out!!! this crashes on Swift 6 migration
     private func startTimer(duration: Double) {
         if timerRunning { return }
         timerRunning = true
