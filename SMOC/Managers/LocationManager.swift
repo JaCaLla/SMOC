@@ -77,8 +77,11 @@ extension LocationManager: @preconcurrency CLLocationManagerDelegate {
         let statuses: [CLAuthorizationStatus] = [.authorizedWhenInUse, .authorizedAlways]
         if statuses.contains(status) {
             internalPermissionGranted = true
-            Task {
-                startUpdatingLocation()
+
+            Task { @GlobalManager in
+               // startUpdatingLocation()
+                guard CLLocationManager.locationServicesEnabled() else { return }
+                await locationManager.startUpdatingLocation()
             }
         } else if status == .notDetermined {
             checkPermission()

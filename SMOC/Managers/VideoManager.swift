@@ -7,6 +7,7 @@
 import AVFoundation
 import Foundation
 import UIKit
+import Vision
 import SwiftUI
 
 protocol AVCaptureDeviceProtocol {
@@ -99,6 +100,18 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     }
     
     @MainActor
+    @Published var maxSpeedSignal: Int = 0
+    internal var internalMaxSpeedSignal: Int = 0 {
+         didSet {
+            Task { [internalMaxSpeedSignal] in
+                await MainActor.run {
+                    self.maxSpeedSignal = internalMaxSpeedSignal
+                }
+            }
+        }
+    }
+    
+    @MainActor
     @Published var permissionGranted: Bool = false
     private var internalPermissionGranted: Bool = false {
          didSet {
@@ -114,6 +127,8 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     let avCaptureSession: AVCaptureSession = AVCaptureSession()
     
     private var avCaptureDevice: AVCaptureDevice?
+    private let queue = DispatchQueue(label: "camera.queue")
+    private let dataOutput = AVCaptureVideoDataOutput()
     private var videoOutput = AVCaptureMovieFileOutput()
     private var outputURL: URL?
     
@@ -179,6 +194,9 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
         
         if internalAVCaptureSession.canAddOutput(videoOutput) {
             internalAVCaptureSession.addOutput(videoOutput)
+            
+            dataOutput.setSampleBufferDelegate(self, queue: queue)
+            internalAVCaptureSession.addOutput(dataOutput)
         }
         
         internalAVCaptureSession.commitConfiguration()

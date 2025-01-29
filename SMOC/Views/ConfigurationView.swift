@@ -11,12 +11,14 @@ enum AppStorageVar: String {
     case preRecordingSecs
     case postRecordingSecs
     case motionThreshold
+    case speedSignalDetection
 }
 
 struct AppStorageDefaultValues {
     static let preRecordingSecs: Double = 5.0
     static let postRecordingSecs: Double = 5.0
     static let motionThreshold: Double = 2.0
+    static let speedSignalDetection: Bool = true
 }
 
 struct ConfigurationView: View {
@@ -32,17 +34,23 @@ struct ConfigurationView: View {
     @State private var motionThresholdSlider: Double = 0.0
     @AppStorage(AppStorageVar.motionThreshold.rawValue) private var motionThreshold = AppStorageDefaultValues.motionThreshold
     
+    @State private var speedSignalDetectionSwitch: Bool = false
+    @AppStorage(AppStorageVar.speedSignalDetection.rawValue) private var speedSignalDetection = AppStorageDefaultValues.speedSignalDetection
+    
     var body: some View {
         Form {
             prepostSection(header: "pre_recording_secs", value: $preRecordingSecsSlider)
             prepostSection(header: "post_recording_secs", value: $postRecordingSecsSlider)
-            motionThresholSection(header: "motion_threshold_trigger_record", value: $motionThresholdSlider, range: 1...20)
+            motionThresholSection(header: "motion_threshold_trigger_record", value: $motionThresholdSlider, range: 1...5)
+            motionBooleanSection(header: "experimental", value: $speedSignalDetectionSwitch)
         }.onChange(of: preRecordingSecsSlider) { _, newValue in
             preRecordingSecs = newValue
         }.onChange(of: postRecordingSecsSlider) { _, newValue in
             postRecordingSecs = newValue
         }.onChange(of: motionThresholdSlider) { _, newValue in
             motionThreshold = newValue
+        }.onChange(of: speedSignalDetectionSwitch) { _, newValue in
+            speedSignalDetection = newValue
         }.onAppear {
             Task {
                 await videoManager.stopSession()
@@ -50,6 +58,7 @@ struct ConfigurationView: View {
             preRecordingSecsSlider = Double(preRecordingSecs)
             postRecordingSecsSlider = Double(postRecordingSecs)
             motionThresholdSlider = Double(motionThreshold)
+            speedSignalDetectionSwitch = speedSignalDetection
         }.onDisappear(perform: {
             Task {
                 await videoManager.setupSessionAndStartRecording()
@@ -60,13 +69,21 @@ struct ConfigurationView: View {
         }
     }
     
-    private func motionThresholSection(header: LocalizedStringResource, value: Binding<Double>, range: ClosedRange<Double> = 1...10) -> some View {
+    private func motionBooleanSection(header: LocalizedStringResource, value: Binding<Bool>) -> some View {
+        Section {
+            Toggle("speed_signal_detection", isOn: value)
+        } header: {
+            Text(String(format: String(localized: header), value.wrappedValue))
+        }
+    }
+    
+    private func motionThresholSection(header: LocalizedStringResource, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
         Section {
             Slider(value: value,
                    in: range,
                    step: 1,
                    minimumValueLabel: Text("\(Int(range.lowerBound))"),
-                   maximumValueLabel:  Text("\(Int(range.upperBound))")) {
+                   maximumValueLabel:  Text(">=\(Int(range.upperBound))")) {
                 EmptyView()
             }
         } header: {

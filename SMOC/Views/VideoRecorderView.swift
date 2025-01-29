@@ -72,7 +72,7 @@ struct VideoRecorderView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 30, height: 30)
-                            .foregroundColor( .gray)
+                            .foregroundColor( .white)
                     }.opacity(highOpacity)
                 }.padding()
             }
@@ -89,15 +89,18 @@ struct VideoRecorderView: View {
         return AnyView(
             VStack {
                 HStack(alignment: .lastTextBaseline) {
-                    Text(currentSpeed)
-                        .font(.currentSpeedFont)
+                    HStack(alignment: .center, spacing: 10) {
+                        trafficLimitSpeedSignalView()
+                        Text(currentSpeed)
+                            .font(.currentSpeedFont)
+                    }
                     Text(currentSpeedUnits)
                         .font(.currentSpeedUnitsFont)
 
                 }
                 HStack {
-                    Text(getRotationRate())
-                        .font(.currentSpeedUnitsFont)
+//                    Text(getRotationRate())
+//                        .font(.currentSpeedUnitsFont)
                     if motionManager.motionAlarm {
                         Image(systemName: "car.rear.and.tire.marks")
                             .resizable()
@@ -108,17 +111,36 @@ struct VideoRecorderView: View {
                 }
             }.onChange(of: motionManager.motionAlarm) { oldValue, newValue in
                 guard !oldValue, newValue else { return }
-            //    stopRecording()
-                
+                stopRecording()
             }
         )
     }
     
+    func trafficLimitSpeedSignalView() -> some View {
+        @AppStorage(AppStorageVar.speedSignalDetection.rawValue) var speedSignalDetection = AppStorageDefaultValues.speedSignalDetection
+        if speedSignalDetection,
+           videoManager.maxSpeedSignal > 0 {
+            return AnyView(
+            ZStack {
+                 Circle()
+                     .stroke(Color.red, lineWidth: 15)
+                     .frame(width: 150 / 3, height: 150 / 3)
+                 Circle()
+                     .fill(Color.white)
+                     .frame(width: 140 / 3, height: 140 / 3)
+                 
+                 Text("\(videoManager.maxSpeedSignal)")
+                     .font(.system(size: 20, weight: .heavy))
+                     .foregroundColor(.black)
+             }
+            )
+        } else {
+            return AnyView(EmptyView())
+        }
+    }
+    
     func getRotationRate() -> String {
-      //  let max = max(motionManager.rotationRate.x , max( motionManager.rotationRate.y , motionManager.rotationRate.z ))
-       return String(format: "%.2f", motionManager.rotationRate )
-        
-     //   "\(motionManager.rotationRate.x, specifier: "%.2f")"
+       return String(format: "%.2f", motionManager.acceleration )
     }
 
     func progressView() -> some View {

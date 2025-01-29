@@ -4,6 +4,9 @@
     "%lld" : {
 
     },
+    ">=%lld" : {
+
+    },
     "alert_btn_settings" : {
       "localizations" : {
         "en" : {
@@ -32,6 +35,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Para grabar videoclips y guardarlos en la galería de tu dispositivo, la aplicación requiere permiso para acceder a tu cámara, micrófono y galería de fotos. Además, funciones como el velocímetro y la superposición de ciudades y provincias que se muestran en la pantalla de vista previa requieren acceso a los servicios de ubicación de tu dispositivo."
+          }
+        }
+      }
+    },
+    "experimental" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Experimental features"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Características experimentales"
           }
         }
       }
@@ -113,6 +132,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pregrabación %.0f segundos"
+          }
+        }
+      }
+    },
+    "speed_signal_detection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed Signal Detection"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detección de señales de límite de velocidad"
           }
         }
       }

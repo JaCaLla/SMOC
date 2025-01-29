@@ -28,12 +28,12 @@ class MotionManager: ObservableObject {
     }
     
     @MainActor
-    @Published var rotationRate = 0.0
-    private var internalRotationRate = 0.0 {
+    @Published var acceleration = 0.0
+    private var internalAcceleration = 0.0 {
          didSet {
-            Task { [internalRotationRate] in
+            Task { [internalAcceleration] in
                 await MainActor.run {
-                    self.rotationRate = internalRotationRate
+                    self.acceleration = internalAcceleration
                 }
             }
         }
@@ -49,12 +49,12 @@ class MotionManager: ObservableObject {
     var removeMaxTimeout = false
     func startGyroscope() async {
         if motionManager.isGyroAvailable {
-            motionManager.gyroUpdateInterval = 0.1 // Intervalo de actualización (en segundos)
-            motionManager.startGyroUpdates(to: .main) { [weak self] (data, error) in
+            motionManager.gyroUpdateInterval = 0.1 
+            motionManager.startAccelerometerUpdates(to: .main) { [weak self] (data, error) in
                 if let data = data, let self {
-                    let max = max(abs(data.rotationRate.x) , max( abs(data.rotationRate.y) , abs(data.rotationRate.z)))
-                    if max > self.internalRotationRate {
-                        self.internalRotationRate =  max
+                    let max = max(abs(data.acceleration.x) , max( abs(data.acceleration.y) , abs(data.acceleration.z)))
+                    if max > self.internalAcceleration {
+                        self.internalAcceleration =  max
                     } else {
                         guard !removeMaxTimeout else { return }
                         removeMaxTimeout = true
@@ -64,7 +64,7 @@ class MotionManager: ObservableObject {
                                 guard let self else {
                                     return
                                 }
-                                self.internalRotationRate = 0.0
+                                self.internalAcceleration = 0.0
                                 self.removeMaxTimeout = false
                             }
                         }
