@@ -28,13 +28,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To record video clips and save them to your device's gallery, the app requires permission to access your camera, microphone, and photo gallery. Additionally, features such as the speedometer and the town-and-province overlay displayed on the preview screen require access to your device's location services"
+            "value" : "To record video clips and save them to your device's gallery, the app requires permission to access your camera, microphone, and photo gallery (full access, not limited). Additionally, features such as the speedometer and the town-and-province overlay displayed on the preview screen require access to your device's location services"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para grabar videoclips y guardarlos en la galería de tu dispositivo, la aplicación requiere permiso para acceder a tu cámara, micrófono y galería de fotos. Además, funciones como el velocímetro y la superposición de ciudades y provincias que se muestran en la pantalla de vista previa requieren acceso a los servicios de ubicación de tu dispositivo."
+            "value" : "Para grabar videoclips y guardarlos en la galería de tu dispositivo, la aplicación requiere permiso para acceder a tu cámara, micrófono y galería de fotos (acceso total, no limitado). Además, funciones como el velocímetro y la superposición de ciudades y provincias que se muestran en la pantalla de vista previa requieren acceso a los servicios de ubicación de tu dispositivo."
           }
         }
       }
