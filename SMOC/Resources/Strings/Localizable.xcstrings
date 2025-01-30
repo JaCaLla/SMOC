@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld" : {
+
+    },
+    ">=%lld" : {
+
+    },
     "alert_btn_settings" : {
       "localizations" : {
         "en" : {
@@ -22,13 +28,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To record video clips and save them to your device's gallery, the app requires permission to access your camera, microphone, and photo gallery. Additionally, features such as the speedometer and the town-and-province overlay displayed on the preview screen require access to your device's location services"
+            "value" : "To record video clips and save them to your device's gallery, the app requires permission to access your camera, microphone, and photo gallery (full access, not limited). Additionally, features such as the speedometer and the town-and-province overlay displayed on the preview screen require access to your device's location services"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para grabar videoclips y guardarlos en la galería de tu dispositivo, la aplicación requiere permiso para acceder a tu cámara, micrófono y galería de fotos. Además, funciones como el velocímetro y la superposición de ciudades y provincias que se muestran en la pantalla de vista previa requieren acceso a los servicios de ubicación de tu dispositivo."
+            "value" : "Para grabar videoclips y guardarlos en la galería de tu dispositivo, la aplicación requiere permiso para acceder a tu cámara, micrófono y galería de fotos (acceso total, no limitado). Además, funciones como el velocímetro y la superposición de ciudades y provincias que se muestran en la pantalla de vista previa requieren acceso a los servicios de ubicación de tu dispositivo."
+          }
+        }
+      }
+    },
+    "experimental" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Experimental features"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Características experimentales"
           }
         }
       }
@@ -46,6 +68,102 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Preparando app…"
+          }
+        }
+      }
+    },
+    "motion_threshold_trigger_record" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion threhold %.0f triggers video clip recording"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una inercia de %.0f dispara la grabación de clips de video"
+          }
+        }
+      }
+    },
+    "one_sec" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 sec"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 seg"
+          }
+        }
+      }
+    },
+    "post_recording_secs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Post-recording %.0f seconds"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Postgrabación %.0f segundos"
+          }
+        }
+      }
+    },
+    "pre_recording_secs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pre-recording %.0f seconds"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pregrabación %.0f segundos"
+          }
+        }
+      }
+    },
+    "speed_signal_detection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed Signal Detection"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detección de señales de límite de velocidad"
+          }
+        }
+      }
+    },
+    "ten_secs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 secs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "10 segs"
           }
         }
       }

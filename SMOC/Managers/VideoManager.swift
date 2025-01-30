@@ -7,6 +7,8 @@
 import AVFoundation
 import Foundation
 import UIKit
+import Vision
+import SwiftUI
 
 protocol AVCaptureDeviceProtocol {
     static func authorizationStatus(for mediaType: AVMediaType) -> AVAuthorizationStatus
@@ -20,6 +22,8 @@ protocol VideoManagerProtocol {
     func checkPermission() async
     func requestPermission() async -> Bool
 }
+
+extension AVCaptureSession: @unchecked Sendable {}
 
 enum VideoManagerState {
     case notStarted
@@ -62,8 +66,8 @@ enum VideoManagerState {
 @GlobalManager
 class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     
-    private let postRecordingSecs: TimeInterval = 8.0
-    private let preRecordingSecs: TimeInterval = 5.0
+    @AppStorage(AppStorageVar.preRecordingSecs.rawValue) private var preRecordingSecs = AppStorageDefaultValues.preRecordingSecs
+    @AppStorage(AppStorageVar.postRecordingSecs.rawValue) private var postRecordingSecs = AppStorageDefaultValues.postRecordingSecs
     
     var orientationOnStartRecording = AVCaptureVideoOrientation.portrait
     
@@ -96,6 +100,18 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     }
     
     @MainActor
+    @Published var maxSpeedSignal: Int = 0
+    internal var internalMaxSpeedSignal: Int = 0 {
+         didSet {
+            Task { [internalMaxSpeedSignal] in
+                await MainActor.run {
+                    self.maxSpeedSignal = internalMaxSpeedSignal
+                }
+            }
+        }
+    }
+    
+    @MainActor
     @Published var permissionGranted: Bool = false
     private var internalPermissionGranted: Bool = false {
          didSet {
@@ -111,6 +127,8 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     let avCaptureSession: AVCaptureSession = AVCaptureSession()
     
     private var avCaptureDevice: AVCaptureDevice?
+    private let queue = DispatchQueue(label: "camera.queue")
+    private let dataOutput = AVCaptureVideoDataOutput()
     private var videoOutput = AVCaptureMovieFileOutput()
     private var outputURL: URL?
     
@@ -143,15 +161,23 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
         }
     }
     
+    func setupSessionAndStartRecording() async {
+        await setupSession()
+        await startRecording()
+    }
+    
+    func reStartRecording() async {
+        await stopSession()
+        await setupSessionAndStartRecording()
+    }
+    
     func setupSession() async {
         print(">>> setupSession")
         guard internalState == .notStarted else { return }
         
         await appSingletons.fileStoreManager.clearTemporaryDirectory()
         
-        let internalAVCaptureSession = await Task { @MainActor in
-            return avCaptureSession
-        }.value
+        let internalAVCaptureSession = await getAVCaptureSession()
 
         internalAVCaptureSession.beginConfiguration()
         
@@ -168,10 +194,19 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
         
         if internalAVCaptureSession.canAddOutput(videoOutput) {
             internalAVCaptureSession.addOutput(videoOutput)
+            
+            dataOutput.setSampleBufferDelegate(self, queue: queue)
+            internalAVCaptureSession.addOutput(dataOutput)
         }
         
         internalAVCaptureSession.commitConfiguration()
         internalAVCaptureSession.startRunning()
+    }
+    
+    private func getAVCaptureSession() async -> AVCaptureSession {
+        await MainActor.run {
+            return avCaptureSession
+        }
     }
     
     private func getAnyFileURL() -> URL {
@@ -258,9 +293,7 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     func stopSession() async {
         print(">>> stopSession ")
         guard internalState != .notStarted else { return }
-        let internalAVCaptureSession = await Task { @MainActor in
-            return avCaptureSession
-        }.value
+        let internalAVCaptureSession = await getAVCaptureSession()
         internalState = .notStarted
         internalAVCaptureSession.stopRunning()
         invalidateTimers()
@@ -285,6 +318,7 @@ class VideoManager:NSObject, ObservableObject, @unchecked Sendable {
     var timerRunning = false
     private var timer: DispatchSourceTimer?
     
+    // Look out!!! this crashes on Swift 6 migration
     private func startTimer(duration: Double) {
         if timerRunning { return }
         timerRunning = true

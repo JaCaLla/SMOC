@@ -8,6 +8,7 @@
 import Foundation
 import Photos
 
+@MainActor
 protocol ReelManagerProtocol {
     var permissionGranted: Bool { get }
     func checkPermission() async
@@ -15,9 +16,9 @@ protocol ReelManagerProtocol {
     func saveVideoToPhotoLibrary(fileURL: URL) async
 }
 
+@MainActor
 final class ReelManager: ObservableObject {
     
-    @MainActor
     @Published var permissionGranted: Bool = false
     
     private var internalPermissionGranted: Bool = false {
@@ -45,11 +46,17 @@ extension ReelManager: ReelManagerProtocol {
     }
     
     func requestPermission() async -> Bool {
-        return await withCheckedContinuation { continuation in
-            PHPhotoLibrary.requestAuthorization { status in
-                continuation.resume(returning: status == .authorized)
-            }
-        }
+        
+        await PHPhotoLibrary.requestAuthorization(for: .readWrite) == .authorized
+        
+//        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+//        return await withCheckedContinuation { continuation in
+//            PHPhotoLibrary.requestAuthorization { status in
+//                
+//                let fullAccessReel = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+//                continuation.resume(returning: status == .authorized && fullAccessReel == .authorized)
+//            }
+//        }
     }
     
     func saveVideoToPhotoLibrary(fileURL: URL) async {
