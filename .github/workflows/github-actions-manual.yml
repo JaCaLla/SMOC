@@ -1,16 +1,13 @@
-name: Manual Workflow Dispatch
+name: manual-workflow
 
 on:
-  workflow_dispatch:
-    inputs:
-      nombre:
-        description: 'Tu nombre'
-        required: true
-        default: 'Mundo'
+  push:
+    branches:  [main, develop]
 
 jobs:
-  saludo:
-    runs-on: ubuntu-latest
+  sample-job:
+    runs-on: macos-latest
+
     steps:
-      - name: Mostrar saludo
-        run: echo "Hola, ${{ github.event.inputs.nombre }}!"
+      - name: Say something
+        run: echo 'Hello World'
