@@ -1,0 +1,16 @@
+name: Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: 'Tu nombre'
+        required: true
+        default: 'Mundo'
+
+jobs:
+  saludo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mostrar saludo
+        run: echo "Hola, ${{ github.event.inputs.nombre }}!"
