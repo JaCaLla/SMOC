@@ -42,7 +42,7 @@ jobs:
         run: |
           xcodebuild clean archive \
           -scheme SMOC \
-          -configuration Debug \
+          -configuration Release \
           -archivePath build/MyApp.xcarchive \
           -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE=Manual \
