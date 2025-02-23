@@ -5,10 +5,66 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
-      - name: Checkout repository
+      - name: Check out the repository
         uses: actions/checkout@v4
-      
-      - name: Run a script
-        run: echo "Hello, manually triggered workflow!"
+
+      - name: Set to XCode 16.x.y
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+           xcode-version: '16.2.0'
+
+      - name: Create keychain and import certificate
+        env:
+          P12_BASE64: ${{ secrets.P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          echo "$P12_BASE64" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-keychain-settings -lut 3600 build.keychain
+          security list-keychains -s build.keychain
+
+      - name: Set up provisioning profile
+        env:
+          MOBILEPROVISION_BASE64: ${{ secrets.MOBILEPROVISION_BASE64 }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$MOBILEPROVISION_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+          echo ">>>>>"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "<<<<<"
+
+      - name: Archive the app
+        run: |
+          xcodebuild clean archive \
+          -scheme SMOC \
+          -configuration Debug \
+          -archivePath build/MyApp.xcarchive \
+          -destination "generic/platform=iOS" \
+          CODE_SIGN_STYLE=Manual \
+          PROVISIONING_PROFILE_SPECIFIER="SMOC_Dev.mobileprovision" \
+          DEVELOPMENT_TEAM=7ZPDPWR8XU \
+          CODE_SIGN_IDENTITY="Apple Development"
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+          -archivePath build/MyApp.xcarchive \
+          -exportOptionsPlist exportOptions.plist \
+          -exportPath build \
+          -allowProvisioningUpdates
+
+      - name: Upload to TestFlight
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun altool --upload-app -f build/MyApp.ipa -t ios --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD"
+
+      - name: Cleanup Keychain
+        if: always()
+        run: security delete-keychain build.keychain
