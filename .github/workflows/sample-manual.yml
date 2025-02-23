@@ -15,6 +15,13 @@ jobs:
 
       - name: Create keychain and import certificate
         env:
-          MY_SECRET: ${{ secrets.MY_SECRET }}
-        run: 
-          echo "My secret is ${{ secrets.MY_SECRET }}"
+          P12_BASE64: ${{ secrets.P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          echo "$P12_BASE64" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-keychain-settings -lut 3600 build.keychain
+          security list-keychains -s build.keychain
