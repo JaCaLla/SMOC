@@ -47,7 +47,7 @@ jobs:
           -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE=Manual \
           PROVISIONING_PROFILE_SPECIFIER="SMOC_Dev" \
-          DEVELOPMENT_TEAM="7ZPDPWR8XU" \
+          DEVELOPMENT_TEAM="AAAAAAAAAA" \
           CODE_SIGN_IDENTITY="Apple Development"
 
       - name: Export IPA
