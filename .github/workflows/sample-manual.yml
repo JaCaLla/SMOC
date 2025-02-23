@@ -16,5 +16,5 @@ jobs:
       - name: Create keychain and import certificate
         env:
           MY_SECRET: ${{ secrets.MY_SECRET }}
-        run: |
-          run: echo "My secret is ${{ secrets.MY_SECRET }}"
+        run: 
+          echo "My secret is ${{ secrets.MY_SECRET }}"
