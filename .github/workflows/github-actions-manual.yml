@@ -1,4 +1,4 @@
-name: manual-workflow
+name: github-actions-manual
 
 on:
   workflow_dispatch:  # Enables manual execution
