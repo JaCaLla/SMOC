@@ -46,7 +46,7 @@ jobs:
           -archivePath build/MyApp.xcarchive \
           -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE=Manual \
-          PROVISIONING_PROFILE_SPECIFIER="SMOC_Dev.mobileprovision" \
+          PROVISIONING_PROFILE_SPECIFIER="SMOC_Dev" \
           DEVELOPMENT_TEAM=7ZPDPWR8XU \
           CODE_SIGN_IDENTITY="Apple Development"
 
