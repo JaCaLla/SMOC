@@ -1,16 +1,11 @@
 name: manual-workflow
 
 on:
-  workflow_dispatch:
-    inputs:
-      nombre:
-        description: 'Tu nombre'
-        required: true
-        default: 'Mundo'
+  workflow_dispatch: # Manually trigger the workflow
 
 jobs:
-  saludo:
+  build:
     runs-on: macos-latest
     steps:
-      - name: Mostrar saludo
-        run: echo "Hola, ${{ github.event.inputs.nombre }}!"
+      - name: Checkout repository
+        uses: actions/checkout@v4
