@@ -34,6 +34,9 @@ jobs:
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$MOBILEPROVISION_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+          echo ">>>>>"
+          ls ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "<<<<<"
 
       - name: Archive the app
         run: |
