@@ -41,7 +41,7 @@ jobs:
       - name: Archive the app
         run: |
           xcodebuild clean archive \
-          -scheme MyApp \
+          -scheme SMOC \
           -configuration Debug \
           -archivePath build/MyApp.xcarchive \
           -destination "generic/platform=iOS" \
