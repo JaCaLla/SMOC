@@ -27,8 +27,12 @@ jobs:
         with:
           languages: swift
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Build manually
+        run: |
+            xcodebuild clean build \
+            -project SMOC.xcodeproj \
+            -scheme SMOC \
+            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest'v3
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
