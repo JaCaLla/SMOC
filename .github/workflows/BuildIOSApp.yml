@@ -48,7 +48,7 @@ jobs:
 
       - name: build archive
         run: |
-          xcodebuild -scheme "SMOC" \
+          xcodebuild -scheme SMOC \
           -archivePath $RUNNER_TEMP/smoc.xcarchive \
           -sdk iphoneos \
           -configuration Debug \
