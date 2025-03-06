@@ -19,14 +19,17 @@ jobs:
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
           # Import certificate from secrets
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
         
           # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -36,10 +39,17 @@ jobs:
           # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles
       
       - name: Install Provisioning Profile
         env:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.MOBILEPROVISION_BASE64 }}
+        if: false
         run: |
           # Create variables
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
@@ -56,6 +66,7 @@ jobs:
       - name: Build and Archive
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/MyApp.xcarchive
+        if: false
         run: |
           xcodebuild clean archive -allowProvisioningUpdates -scheme "SMOC" -configuration Debug -archivePath $ARCHIVE_PATH
 
@@ -63,6 +74,7 @@ jobs:
         env:
           EXPORT_PATH: ${{ runner.temp }}/export
           EXPORT_OPTIONS_PLIST: ${{ secrets.EXPORT_OPTIONS_PLIST }}
+        if: false
         run: |
           # Create export options plist file
           echo "$EXPORT_OPTIONS_PLIST" > ExportOptions.plist
