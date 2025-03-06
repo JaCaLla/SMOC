@@ -36,7 +36,7 @@ jobs:
 
       - name: Build .ipa file
         run: |
-          xcodebuild -allowProvisioningUpdates -scheme SMOC -configuration Debug -archivePath build/SMOC.xcarchive archive
+          xcodebuild -allowProvisioningUpdates -scheme SMOC -configuration Release -archivePath build/SMOC.xcarchive archive
           
           xcodebuild -exportArchive \
             -archivePath build/SMOC.xcarchive \
