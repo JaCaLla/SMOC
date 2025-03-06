@@ -36,8 +36,7 @@ jobs:
 
       - name: Build .ipa file
         run: |
-          xcodebuild -workspace SMOC.xcworkspace \
-            -scheme SMOC \
+          xcodebuild -scheme SMOC \
             -configuration Release \
             -archivePath build/SMOC.xcarchive \
             archive
