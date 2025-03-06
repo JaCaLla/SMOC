@@ -3,7 +3,7 @@ name: Deploy iOS to TestFlight
 on:
   push:
     branches:
-      - main # O la rama que prefieras para desplegar
+      - main # O la rama que prefieras para  desplegar
 
 jobs:
   build:
