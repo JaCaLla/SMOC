@@ -57,7 +57,7 @@ jobs:
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/MyApp.xcarchive
         run: |
-          xcodebuild clean archive -scheme "SMOC" -configuration Debug -archivePath $ARCHIVE_PATH
+          xcodebuild clean archive -allowProvisioningUpdates -scheme "SMOC" -configuration Debug -archivePath $ARCHIVE_PATH
 
       - name: Export IPA
         env:
