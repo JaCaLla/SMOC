@@ -36,14 +36,14 @@ jobs:
 
       - name: Build .ipa file
         run: |
-          xcodebuild -workspace MyApp.xcworkspace \
-            -scheme MyApp \
+          xcodebuild -workspace SMOC.xcworkspace \
+            -scheme SMOC \
             -configuration Release \
-            -archivePath build/MyApp.xcarchive \
+            -archivePath build/SMOC.xcarchive \
             archive
 
           xcodebuild -exportArchive \
-            -archivePath build/MyApp.xcarchive \
+            -archivePath build/SMOC.xcarchive \
             -exportOptionsPlist exportOptions.plist \
             -exportPath build/
 
@@ -54,6 +54,6 @@ jobs:
           APPSTORE_TEAM_ID: ${{ secrets.APPSTORE_TEAM_ID }}
         if: false
         run: |
-          xcrun altool --upload-app -f build/MyApp.ipa -t ios \
+          xcrun altool --upload-app -f build/SMOC.ipa -t ios \
             --apiKey "$APPSTORE_EMAIL" \
             --apiIssuer "$APPSTORE_TEAM_ID"
