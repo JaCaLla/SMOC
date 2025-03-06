@@ -35,7 +35,6 @@ jobs:
           mv profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build .ipa file
-        if: false
         run: |
           xcodebuild -workspace MyApp.xcworkspace \
             -scheme MyApp \
