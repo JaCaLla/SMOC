@@ -42,6 +42,7 @@ jobs:
             archive
 
           xcodebuild -exportArchive \
+            -allowProvisioningUpdates \
             -archivePath build/SMOC.xcarchive \
             -exportOptionsPlist exportOptions.plist \
             -exportPath build/
