@@ -1,0 +1,43 @@
+name: "CodeQL Analysis"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 12 * * 1'  # Ejecuta semanalmente los lunes
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: macos-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: swift
+
+      - name: Set to XCode 16.x.y
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+             xcode-version: '16.2.0'
+
+      - name: Build manually
+        run: |
+            xcodebuild clean build \
+            -project SMOC.xcodeproj \
+            -scheme SMOC \
+            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest'v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
