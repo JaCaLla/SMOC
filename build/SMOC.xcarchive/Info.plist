@@ -17,14 +17,14 @@
 		<key>CFBundleVersion</key>
 		<string>10</string>
 		<key>SigningIdentity</key>
-		<string>Apple Development: JAVIER LLAVERIA (GFK5A883VV)</string>
+		<string>Apple Distribution: JAVIER LLAVERIA (7ZPDPWR8XU)</string>
 		<key>Team</key>
 		<string>7ZPDPWR8XU</string>
 	</dict>
 	<key>ArchiveVersion</key>
 	<integer>2</integer>
 	<key>CreationDate</key>
-	<date>2025-02-23T22:02:39Z</date>
+	<date>2025-03-06T22:11:03Z</date>
 	<key>Name</key>
 	<string>SMOC</string>
 	<key>SchemeName</key>
