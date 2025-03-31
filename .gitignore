@@ -61,6 +61,5 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
-Certs*/
 
 SMOC.xcodeproj/project.xcworkspace/xcuserdata/javiercalartrava.xcuserdatad/UserInterfaceState.xcuserstate

@@ -16,8 +16,8 @@ struct SMOCTests {
             let appBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String else {
             fatalError("testAppVersionAndBuild failed on fetching keys from dictionary")
         }
-        #expect(appVersion == "0.0.4")
-        #expect(appBuild == "11")
+        #expect(appVersion == "0.0.1")
+        #expect(appBuild == "8")
     }
 
 }
