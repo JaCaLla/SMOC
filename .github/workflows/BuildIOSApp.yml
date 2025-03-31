@@ -52,7 +52,6 @@ jobs:
           -archivePath $RUNNER_TEMP/smoc.xcarchive \
           -sdk iphoneos \
           -configuration Release \
-          -allowProvisioningUpdates \
           -destination generic/platform=iOS \
           clean archive          
 
